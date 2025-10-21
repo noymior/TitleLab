@@ -1,0 +1,12 @@
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;font:16px/1.4 -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,'PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif;color:var(--color-text);background:var(--color-surface)}
+a{color:inherit;text-decoration:none}
+button{cursor:pointer;border:none;background:#eee}
+.app-header{background:var(--color-bg);padding:var(--space-3);position:sticky;top:0;z-index:10;box-shadow:var(--shadow-1)}
+.brand{font-weight:900;font-size:20px;letter-spacing:.5px}
+.brand span{font-weight:900}
+.view{display:none;padding:var(--space-4);max-width:980px;margin:0 auto}
+.view.active{display:block}
+.container{background:#fff;border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:var(--space-4);box-shadow:var(--shadow-1)}
+.hide{display:none !important}

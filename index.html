@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>JasperGYM</title>
+
+  <!-- PWA / Icons -->
+  <link rel="apple-touch-icon" href="assets/favicon_io/apple-touch-icon.png?v=20251021">
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon_io/favicon-32x32.png?v=20251021">
+  <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon_io/favicon-16x16.png?v=20251021">
+  <link rel="manifest" href="site.webmanifest?v=20251021">
+  <meta name="theme-color" content="#91C6FF">
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="css/tokens.css?v=11.1">
+  <link rel="stylesheet" href="css/base.css?v=11.1">
+  <link rel="stylesheet" href="css/layout.css?v=11.1">
+  <link rel="stylesheet" href="css/components.css?v=11.1">
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand">Jasper<span>GYM</span></div>
+    <div id="vmRowTop" class="top-actions">
+      <!-- 第一排 -->
+      <button class="gbtn" data-action="verify">验证云端</button>
+      <button class="gbtn" data-action="connect">云端连接</button>
+      <button class="gbtn" data-action="load">云端读取</button>
+      <button class="gbtn" data-action="save">云端保存</button>
+      <!-- 第二排 -->
+      <button class="gbtn" data-route="#home">🏠 首页</button>
+      <button class="gbtn" data-route="#workout">💪 训练</button>
+      <button class="gbtn" data-route="#logs">📘 日志</button>
+      <button class="gbtn" data-route="#settings">⚙️ 设置</button>
+    </div>
+  </header>
+
+  <main id="app">
+    <section id="view-home" class="view"></section>
+    <section id="view-workout" class="view"></section>
+    <section id="view-logs" class="view"></section>
+    <section id="view-settings" class="view"></section>
+  </main>
+
+  <div id="modal-root" aria-hidden="true"></div>
+  <div id="toast-root" aria-live="polite" aria-atomic="true"></div>
+
+  <!-- 单文件配置，避免异步 JSON 带来的启动复杂度 -->
+  <script type="module" src="js/main.js?v=11.1"></script>
+</body>
+</html>

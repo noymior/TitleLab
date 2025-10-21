@@ -1,0 +1,6 @@
+.top-actions{display:grid;grid-template-columns:repeat(8,1fr);gap:var(--space-2);margin-top:var(--space-3)}
+.gbtn{height:var(--btn-h);border-radius:var(--radius-pill);background:#ffffff;box-shadow:var(--shadow-1);padding:0 var(--space-4);font-weight:700}
+.gbtn:active{transform:translateY(1px)}
+@media (max-width: 768px){
+  .top-actions{grid-template-columns:repeat(4,1fr)}
+}

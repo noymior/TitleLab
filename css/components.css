@@ -1,0 +1,20 @@
+.row{display:flex;gap:var(--space-2);align-items:center}
+.btn{height:var(--btn-h);padding:0 var(--space-4);border-radius:var(--radius-pill);display:inline-flex;align-items:center;justify-content:center;font-weight:700}
+.btn--ok{background:var(--color-ok);color:#fff}
+.btn--light{background:transparent;border:1px solid var(--color-border)}
+.btn--warn{background:var(--color-warn);color:#fff}
+.card{border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:var(--space-4);box-shadow:var(--shadow-1)}
+.list{display:grid;gap:var(--space-2)}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:rgba(0,0,0,.85);color:#fff;padding:10px 14px;border-radius:var(--radius-pill);z-index:1000}
+.modal-mask{position:fixed;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;z-index:1000}
+.modal{background:#fff;border-radius:16px;min-width:320px;max-width:92vw;padding:16px;box-shadow:var(--shadow-2)}
+.modal header{font-weight:800;margin-bottom:8px}
+.modal .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
+.badge{display:inline-block;padding:2px 8px;border-radius:999px;background:#eef2ff}
+.table{width:100%;border-collapse:collapse}
+.table th,.table td{border-bottom:1px solid var(--color-border);padding:8px 6px;text-align:left}
+/* 页级微调（合并自 pages.css） */
+#view-home .grid{display:grid;gap:var(--space-3)}
+#view-workout .timer{font-size:48px;font-weight:900;text-align:center;margin:16px 0}
+#view-logs .log-item{padding:10px;border:1px solid var(--color-border);border-radius:12px}
+#view-settings .kv{display:grid;grid-template-columns:120px 1fr;gap:10px;align-items:center}
