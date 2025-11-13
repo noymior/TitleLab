@@ -13,13 +13,28 @@
   --radius-pill: 999px;
   --zebra: #f9fafb;
 }
+/* 强制隐藏类，防止弹窗一进页面就显示 */
+.hidden {
+  display: none !important;
+}
+/* 隐藏工具栏里的“内容类型（全部）”筛选下拉 */
+#filterContentType {
+  display: none;
+}
+/* 隐藏表格中的“内容类型”这一列 */
+/* th: 第 5 列，td: 第 5 列 */
+#titleTable th:nth-child(5),
+#titleTable td:nth-child(5) {
+  display: none;
+}
 
 
-/* 操作按钮一排显示 */
+/* 操作按钮的单元格不换行 */
 .actions-cell {
   white-space: nowrap;
 }
 
+/* 按钮一排展示 */
 .action-group {
   display: inline-flex;
   gap: 4px;
@@ -70,12 +85,15 @@ body.bg-page {
 }
 
 .nav-tab {
-  padding: 6px 14px;
+  padding: 6px 20px;          /* 左右 padding 加大 */
+  min-width: 90px;            /* 最小宽度拉长一倍左右 */
+  text-align: center;         /* 文本居中 */
   border-radius: var(--radius-pill);
   font-size: 14px;
   color: var(--text-muted);
   border: 1px solid transparent;
 }
+
 
 .nav-tab-active {
   background: var(--primary-soft);
