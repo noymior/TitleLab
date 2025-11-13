@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <title>TitleForge · 标题管理</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <!-- TailwindCDN -->
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"
+    />
+
+    <!-- 自定义样式（覆盖细节） -->
+    <link rel="stylesheet" href="assets/styles.css" />
+
+    <!-- GSAP 动画 -->
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js" defer></script>
+
+    <!-- Supabase JS -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <!-- 配置 & 工具 -->
+    <script src="assets/supabase.js" defer></script>
+    <script src="assets/classifier.js" defer></script>
+    <script src="assets/app-title.js" defer></script>
+  </head>
+  <body class="bg-page">
+    <div class="wrap">
+      <!-- 顶部导航 -->
+      <header class="topbar">
+        <div class="topbar-left">
+          <div class="brand">
+            <span class="brand-main">TitleForge</span>
+            <span class="brand-sub">标题与文案管理系统</span>
+          </div>
+        </div>
+        <nav class="topbar-nav">
+          <a href="title.html" class="nav-tab nav-tab-active">标题</a>
+          <a href="content.html" class="nav-tab">文案</a>
+        </nav>
+        <div class="topbar-right">
+          <span id="supabaseStatus" class="pill pill-muted">Connecting…</span>
+        </div>
+      </header>
+
+      <main class="layout">
+        <!-- 左侧分类栏 -->
+        <aside class="sidebar panel">
+          <div class="sidebar-header">
+            <h2 class="panel-title">分类</h2>
+            <button id="btnAddCategory" class="function-btn ghost text-xs">
+              新增分类
+            </button>
+          </div>
+          <ul id="categoryList" class="category-list">
+            <!-- JS 渲染：全部 / 亲子 / 情侣 / ... -->
+          </ul>
+        </aside>
+
+        <!-- 右侧主体 -->
+        <section class="panel content-area">
+          <!-- 工具栏 -->
+          <div class="toolbar">
+            <div class="toolbar-left">
+              <input
+                id="searchInput"
+                type="search"
+                class="input"
+                placeholder="搜索标题 / 关键词"
+              />
+            </div>
+            <div class="toolbar-center">
+              <select id="filterContentType" class="select">
+                <option value="">内容类型（全部）</option>
+                <option value="展示">出片展示</option>
+                <option value="攻略">攻略 / 机位</option>
+                <option value="服务">服务推荐</option>
+                <option value="节日">节日主题</option>
+              </select>
+
+              <select id="filterScene" class="select">
+                <option value="">场景（全部）</option>
+                <option value="港迪城堡">港迪城堡</option>
+                <option value="烟花">烟花</option>
+                <option value="夜景">夜景</option>
+                <option value="街拍">香港街拍</option>
+              </select>
+            </div>
+            <div class="toolbar-right">
+              <button id="btnNewTitle" class="function-btn primary">
+                新增标题
+              </button>
+              <button id="btnBatchImport" class="function-btn ghost">
+                批量导入
+              </button>
+            </div>
+          </div>
+
+          <!-- 桌面端表格 -->
+          <div class="table-wrap desktop-only">
+            <table class="data-table zebra" id="titleTable">
+              <thead>
+                <tr>
+                  <th class="w-10">#</th>
+                  <th>标题</th>
+                  <th class="w-28">主分类</th>
+                  <th class="w-28">场景</th>
+                  <th class="w-28">内容类型</th>
+                  <th class="w-16">使用</th>
+                  <th class="w-32">操作</th>
+                </tr>
+              </thead>
+              <tbody id="titleTableBody">
+                <!-- JS 渲染 -->
+              </tbody>
+            </table>
+          </div>
+
+          <!-- 移动端卡片列表 -->
+          <div id="mobileList" class="mobile-only space-y-3">
+            <!-- JS 渲染 -->
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <!-- 新增 / 编辑 标题弹窗 -->
+    <div id="titleModal" class="modal-backdrop hidden">
+      <div class="modal">
+        <div class="modal-header">
+          <h3 id="titleModalTitle">新增标题</h3>
+          <button id="btnCloseModal" class="modal-close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <label class="field-label">
+            标题文本
+            <textarea
+              id="fieldText"
+              class="textarea"
+              rows="3"
+              placeholder="请输入标题…"
+            ></textarea>
+          </label>
+
+          <div class="field-grid">
+            <label class="field-label">
+              主分类
+              <select id="fieldMainCategory" class="select">
+                <!-- JS 用分类列表填充 -->
+              </select>
+            </label>
+            <label class="field-label">
+              内容类型
+              <select id="fieldContentType" class="select">
+                <option value="">自动识别或手选</option>
+                <option value="展示">出片展示</option>
+                <option value="攻略">攻略 / 机位</option>
+                <option value="服务">服务推荐</option>
+                <option value="节日">节日主题</option>
+              </select>
+            </label>
+          </div>
+
+          <label class="field-label">
+            场景标签（可多选，逗号分隔）
+            <input
+              id="fieldSceneTags"
+              class="input"
+              placeholder="如：港迪城堡, 烟花"
+            />
+          </label>
+        </div>
+        <div class="modal-footer">
+          <button id="btnSaveTitle" class="function-btn primary w-28">
+            保存
+          </button>
+          <button id="btnCancelModal" class="function-btn ghost w-24">
+            取消
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 批量导入弹窗 -->
+    <div id="importModal" class="modal-backdrop hidden">
+      <div class="modal modal-lg">
+        <div class="modal-header">
+          <h3>批量导入标题</h3>
+          <button id="btnCloseImport" class="modal-close">&times;</button>
+        </div>
+        <div class="modal-body space-y-3">
+          <p class="text-sm text-gray-500">
+            每行一个标题，系统会尝试根据关键词自动识别分类和标签，你可以在导入前检查和修改。
+          </p>
+          <textarea
+            id="importRawInput"
+            class="textarea"
+            rows="8"
+            placeholder="一行一个标题…"
+          ></textarea>
+
+          <div id="importPreview" class="import-preview">
+            <!-- JS 预览识别结果 -->
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button id="btnRunImport" class="function-btn primary w-32">
+            识别并导入
+          </button>
+          <button id="btnCancelImport" class="function-btn ghost w-24">
+            取消
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="toast hidden"></div>
+  </body>
+</html>
