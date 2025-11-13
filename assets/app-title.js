@@ -19,12 +19,13 @@ let toastTimer = null;
 document.addEventListener('DOMContentLoaded', () => {
   initCategoryList();
   bindToolbarEvents();
+  bindCategoryButton();
   bindModalEvents();
   bindImportEvents();
   loadTitles();
 });
 
-/* ========== 分类 ========== */
+/* ========== 分类列表 ========== */
 
 function initCategoryList() {
   const list = document.getElementById('categoryList');
@@ -33,6 +34,7 @@ function initCategoryList() {
     return;
   }
   list.innerHTML = '';
+
   state.categories.forEach((name) => {
     const li = document.createElement('li');
     li.className =
@@ -48,6 +50,39 @@ function initCategoryList() {
       renderTitles();
     });
     list.appendChild(li);
+  });
+}
+
+/* ========== 新增分类按钮 ========== */
+
+function bindCategoryButton() {
+  const btnAddCategory = document.getElementById('btnAddCategory');
+  if (!btnAddCategory) {
+    console.error('找不到 #btnAddCategory');
+    return;
+  }
+
+  btnAddCategory.addEventListener('click', () => {
+    const name = prompt('请输入新分类名称（例如：夜樱 / 亲子旅拍）：');
+    if (!name) return;
+
+    const trimmed = name.trim();
+    if (!trimmed) return;
+
+    if (trimmed === '全部') {
+      showToast('不能使用“全部”作为分类名');
+      return;
+    }
+
+    if (state.categories.includes(trimmed)) {
+      showToast('该分类已存在');
+      return;
+    }
+
+    // “全部”永远在第一位，新分类插在后面
+    state.categories.push(trimmed);
+    initCategoryList();
+    showToast('已新增分类：' + trimmed);
   });
 }
 
@@ -192,6 +227,11 @@ function renderTitles() {
     tr.appendChild(tdUsage);
 
     const tdActions = document.createElement('td');
+    tdActions.className = 'actions-cell';
+
+    // ⭐ 用一个容器包起来，强制一排显示
+    const actionsWrap = document.createElement('div');
+    actionsWrap.className = 'action-group';
 
     const btnCopy = document.createElement('button');
     btnCopy.className = 'function-btn ghost text-xs';
@@ -199,16 +239,17 @@ function renderTitles() {
     btnCopy.addEventListener('click', () => copyTitle(item));
 
     const btnEdit = document.createElement('button');
-    btnEdit.className = 'function-btn ghost text-xs ml-1';
+    btnEdit.className = 'function-btn ghost text-xs';
     btnEdit.textContent = '修改';
     btnEdit.addEventListener('click', () => openTitleModal(item));
 
     const btnDel = document.createElement('button');
-    btnDel.className = 'function-btn ghost text-xs ml-1';
+    btnDel.className = 'function-btn ghost text-xs';
     btnDel.textContent = '删除';
     btnDel.addEventListener('click', () => deleteTitle(item));
 
-    tdActions.append(btnCopy, btnEdit, btnDel);
+    actionsWrap.append(btnCopy, btnEdit, btnDel);
+    tdActions.appendChild(actionsWrap);
     tr.appendChild(tdActions);
 
     tbody.appendChild(tr);
@@ -360,11 +401,14 @@ function openTitleModal(item) {
   modal.style.display = 'flex';
 
   if (window.gsap) {
-    gsap.fromTo(
-      modal.querySelector('.modal'),
-      { y: 30, opacity: 0 },
-      { y: 0, opacity: 1, duration: 0.2 }
-    );
+    const box = modal.querySelector('.modal');
+    if (box) {
+      gsap.fromTo(
+        box,
+        { y: 30, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.2 }
+      );
+    }
   }
 }
 
