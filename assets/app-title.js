@@ -1,5 +1,7 @@
 // assets/app-title.js
 
+// ====================== 基础状态 ======================
+
 // 默认分类
 const DEFAULT_CATEGORIES = [
   '全部',
@@ -30,23 +32,22 @@ let toastTimer = null;
 
 // 入口
 document.addEventListener('DOMContentLoaded', () => {
-  loadCategoriesFromStorage();   // ① 先从 localStorage 读取分类
+  loadCategoriesFromStorage();   // 读分类
   initCategoryList();
   bindToolbarEvents();
+  bindExtraActions();
   bindCategoryButton();
   bindModalEvents();
   bindImportEvents();
-  loadTitles();
+  loadTitles();                  // 读 Supabase
 });
 
-/* ========== 分类持久化 ========== */
+// ====================== 分类持久化 ======================
 
-// 从 localStorage 加载分类
 function loadCategoriesFromStorage() {
   try {
     const raw = localStorage.getItem('titleCategories');
     if (!raw) {
-      // 没存过，用默认分类
       state.categories = [...DEFAULT_CATEGORIES];
       return;
     }
@@ -55,8 +56,6 @@ function loadCategoriesFromStorage() {
       state.categories = [...DEFAULT_CATEGORIES];
       return;
     }
-
-    // 确保“全部”在第一个，其余去重
     const set = new Set(arr);
     set.delete('全部');
     state.categories = ['全部', ...Array.from(set)];
@@ -66,7 +65,6 @@ function loadCategoriesFromStorage() {
   }
 }
 
-// 保存分类到 localStorage
 function saveCategoriesToStorage() {
   try {
     localStorage.setItem('titleCategories', JSON.stringify(state.categories));
@@ -75,7 +73,7 @@ function saveCategoriesToStorage() {
   }
 }
 
-/* ========== 分类列表 ========== */
+// ====================== 分类列表 ======================
 
 function initCategoryList() {
   const list = document.getElementById('categoryList');
@@ -103,8 +101,7 @@ function initCategoryList() {
   });
 }
 
-/* ========== 新增分类按钮 ========== */
-
+// 新增分类按钮
 function bindCategoryButton() {
   const btnAddCategory = document.getElementById('btnAddCategory');
   if (!btnAddCategory) {
@@ -129,15 +126,14 @@ function bindCategoryButton() {
       return;
     }
 
-    // “全部”永远在第一位，新分类插在后面
     state.categories.push(trimmed);
-    saveCategoriesToStorage();  // ⭐ 新增后立刻持久化
+    saveCategoriesToStorage();
     initCategoryList();
     showToast('已新增分类：' + trimmed);
   });
 }
 
-/* ========== 工具栏事件 ========== */
+// ====================== 工具栏事件 ======================
 
 function bindToolbarEvents() {
   const searchInput = document.getElementById('searchInput');
@@ -177,7 +173,63 @@ function bindToolbarEvents() {
   btnBatchImport.addEventListener('click', openImportModal);
 }
 
-/* ========== 加载 Supabase 数据 ========== */
+// 顶部 5 个功能按钮
+function bindExtraActions() {
+  const btnClearAll = document.getElementById('btnClearAll');
+  const btnSettings = document.getElementById('btnSettings');
+  const btnSaveCloud = document.getElementById('btnSaveCloud');
+  const btnLoadCloud = document.getElementById('btnLoadCloud');
+  const btnManagePage = document.getElementById('btnManagePage');
+
+  if (btnClearAll) {
+    btnClearAll.addEventListener('click', async () => {
+      if (!confirm('确定要清空全部标题吗？')) return;
+      try {
+        const { error } = await supabaseClient.from('titles').delete().neq('id', null);
+        if (error) {
+          console.error('清空失败:', error);
+          showToast('清空失败：' + (error.message || '请查看控制台'));
+          return;
+        }
+        showToast('已清空全部标题');
+        await loadTitles();
+      } catch (e) {
+        console.error('清空异常:', e);
+        showToast('清空异常（详见控制台）');
+      }
+    });
+  }
+
+  if (btnSettings) {
+    btnSettings.addEventListener('click', () => {
+      // 先跳转占位页面，后续你可以自己建 settings.html
+      window.location.href = 'settings.html';
+    });
+  }
+
+  if (btnSaveCloud) {
+    btnSaveCloud.addEventListener('click', () => {
+      // 目前所有标题本身就存 Supabase，这里先做占位提醒
+      showToast('当前数据已实时保存到云端');
+    });
+  }
+
+  if (btnLoadCloud) {
+    btnLoadCloud.addEventListener('click', async () => {
+      await loadTitles();
+      showToast('已从云端刷新最新数据');
+    });
+  }
+
+  if (btnManagePage) {
+    btnManagePage.addEventListener('click', () => {
+      // 预留给你未来的管理页面
+      window.location.href = 'manage.html';
+    });
+  }
+}
+
+// ====================== Supabase 加载 ======================
 
 async function loadTitles() {
   try {
@@ -200,7 +252,7 @@ async function loadTitles() {
   }
 }
 
-/* ========== 渲染逻辑 ========== */
+// ====================== 渲染逻辑 ======================
 
 function applyFilters(items) {
   return items.filter((item) => {
@@ -248,7 +300,7 @@ function renderTitles() {
   const items = applyFilters(state.titles);
 
   items.forEach((item, idx) => {
-    /* 桌面表格行 */
+    // ----- 桌面表格 -----
     const tr = document.createElement('tr');
 
     const tdIndex = document.createElement('td');
@@ -280,7 +332,6 @@ function renderTitles() {
     const tdActions = document.createElement('td');
     tdActions.className = 'actions-cell';
 
-    // 一排显示操作按钮
     const actionsWrap = document.createElement('div');
     actionsWrap.className = 'action-group';
 
@@ -305,7 +356,7 @@ function renderTitles() {
 
     tbody.appendChild(tr);
 
-    /* 移动端卡片 */
+    // ----- 移动端卡片 -----
     const card = document.createElement('div');
     card.className = 'panel mobile-card';
 
@@ -349,7 +400,7 @@ function renderTitles() {
   });
 }
 
-/* ========== 复制标题 ========== */
+// ====================== 复制 / 删除 ======================
 
 async function copyTitle(item) {
   try {
@@ -372,8 +423,6 @@ async function copyTitle(item) {
   }
 }
 
-/* ========== 删除标题 ========== */
-
 async function deleteTitle(item) {
   if (!confirm('确认删除这条标题？')) return;
 
@@ -388,7 +437,7 @@ async function deleteTitle(item) {
   renderTitles();
 }
 
-/* ========== 新增 / 编辑弹窗 ========== */
+// ====================== 新增 / 编辑弹窗 ======================
 
 function bindModalEvents() {
   const btnCloseModal = document.getElementById('btnCloseModal');
@@ -418,7 +467,7 @@ function openTitleModal(item) {
     return;
   }
 
-  // 填充分类下拉（不含“全部”）
+  // 分类下拉（不包含“全部”）
   fieldCat.innerHTML = '';
   state.categories
     .filter((c) => c !== '全部')
@@ -538,7 +587,7 @@ async function saveTitleFromModal() {
   }
 }
 
-/* ========== 批量导入相关 ========== */
+// ====================== 批量导入 ======================
 
 function bindImportEvents() {
   const btnCloseImport = document.getElementById('btnCloseImport');
@@ -641,7 +690,6 @@ async function runImport() {
       return;
     }
 
-    // 预览识别结果
     buildImportPreview(lines);
 
     if (!confirm(`共 ${lines.length} 条标题，确认导入 Supabase 吗？`)) {
@@ -682,7 +730,7 @@ async function runImport() {
   }
 }
 
-/* ========== Toast ========== */
+// ====================== Toast ======================
 
 function showToast(msg) {
   const el = document.getElementById('toast');
