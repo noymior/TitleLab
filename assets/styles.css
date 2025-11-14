@@ -15,6 +15,23 @@ body {
   margin: auto;
 }
 
+/* 页面主布局：左侧分类 + 右侧列表 */
+.layout {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+/* 电脑端改为左右两列 */
+@media (min-width: 768px) {
+  .layout {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+}
+
+
 /* =============================
    顶部栏
 =============================== */
