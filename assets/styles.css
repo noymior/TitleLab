@@ -148,6 +148,26 @@ body {
   opacity: 0.85;
 }
 
+/* 列表里“操作”那一列的布局 */
+.actions-cell {
+  text-align: center;
+  padding-right: 12px;
+}
+
+.action-group {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+}
+
+.action-group .function-btn {
+  min-width: 56px;
+  padding: 4px 10px;
+  font-size: 13px;
+}
+
+
 /* =============================
    表格（全新 5 列结构）
 =============================== */
