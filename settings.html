@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <title>设置中心</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="assets/styles.css" />
+  </head>
+  <body class="bg-page">
+    <div class="wrap">
+      <header class="topbar mb-4">
+        <div class="topbar-left">
+          <div class="logo-dot"></div>
+          <div class="ml-2">
+            <div class="text-sm font-semibold">设置中心</div>
+            <div class="text-xs text-gray-500">样式与显示 · 占位</div>
+          </div>
+        </div>
+        <button
+          class="function-btn ghost text-xs"
+          onclick="window.location.href='title.html'"
+        >
+          ← 返回标题页
+        </button>
+      </header>
+
+      <main class="layout flex-col gap-3">
+        <section class="panel">
+          <h2 class="text-base font-semibold mb-3">样式设置（占位）</h2>
+          <div class="grid gap-3 md:grid-cols-2">
+            <div>
+              <div class="field-label">标题文字</div>
+              <input class="field-input" placeholder="预留：标题显示方案" />
+            </div>
+            <div>
+              <div class="field-label">号码管理</div>
+              <input class="field-input" placeholder="预留：关联号码方案" />
+            </div>
+
+            <div>
+              <div class="field-label">标题颜色</div>
+              <input class="field-input" placeholder="预留：颜色选择器" />
+            </div>
+            <div>
+              <div class="field-label">按钮颜色</div>
+              <input class="field-input" placeholder="预留：颜色选择器" />
+            </div>
+
+            <div>
+              <div class="field-label">字体</div>
+              <select class="field-input">
+                <option>苹方</option>
+                <option>系统默认</option>
+              </select>
+            </div>
+            <div>
+              <div class="field-label">粗体</div>
+              <select class="field-input">
+                <option>正常</option>
+                <option>加粗</option>
+              </select>
+            </div>
+
+            <div>
+              <div class="field-label">行高</div>
+              <input class="field-input" placeholder="例如 1.4 / 1.6" />
+            </div>
+            <div>
+              <div class="field-label">列宽</div>
+              <input class="field-input" placeholder="例如 80 / 120" />
+            </div>
+
+            <div>
+              <div class="field-label">隔行着色</div>
+              <select class="field-input">
+                <option>开启</option>
+                <option>关闭</option>
+              </select>
+            </div>
+            <div>
+              <div class="field-label">隔行颜色</div>
+              <input class="field-input" placeholder="#F7F8FC" />
+            </div>
+
+            <div>
+              <div class="field-label">一键紧凑</div>
+              <button class="function-btn ghost w-full">
+                一键紧凑（占位）
+              </button>
+            </div>
+            <div>
+              <div class="field-label">恢复默认</div>
+              <button class="function-btn ghost w-full">
+                恢复默认（占位）
+              </button>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>
