@@ -41,6 +41,26 @@ body {
 }
 
 /* ============= 顶部栏 ============= */
+/* 让标题列占据最大宽度、不换行 */
+.basic-table td:nth-child(2),
+.basic-table th:nth-child(2) {
+  white-space: nowrap;
+  max-width: none !important;
+  width: auto !important;
+}
+
+/* 隐藏“场景 / 内容类型” */
+.basic-table th:nth-child(4),
+.basic-table td:nth-child(4),
+.basic-table th:nth-child(5),
+.basic-table td:nth-child(5) {
+  display: none !important;
+}
+
+/* 保证行内容不会挤压，自动等比例排布 */
+.basic-table td {
+  vertical-align: middle;
+}
 
 .topbar {
   display: flex;
