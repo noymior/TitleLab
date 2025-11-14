@@ -3,27 +3,28 @@
   <head>
     <meta charset="UTF-8" />
     <title>标题管理 - 标题与文案库</title>
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1, viewport-fit=cover"
-    />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 
     <!-- Tailwind CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
 
-    <!-- 自定义样式 -->
+    <!-- 样式 -->
     <link rel="stylesheet" href="assets/styles.css" />
 
     <!-- GSAP 动画 -->
-    <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
 
-    <!-- Supabase JS -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+    <!-- Supabase SDK（必须第一个 script） -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-    <!-- 项目脚本 -->
-    <script src="assets/supabase.js" defer></script>
-    <script src="assets/classifier.js" defer></script>
-    <script src="assets/app-title.js" defer></script>
+    <!-- Supabase 配置（创建 supabaseClient） -->
+    <script src="assets/supabase.js"></script>
+
+    <!-- 分类识别（可选） -->
+    <script src="assets/classifier.js"></script>
+
+    <!-- 主逻辑：标题管理 -->
+    <script src="assets/app-title.js"></script>
   </head>
 
   <body class="bg-page">
@@ -40,119 +41,63 @@
         </div>
 
         <div class="topbar-right">
-          <span id="supabaseStatus" class="pill-muted text-xs">Supabase</span>
+          <span id="supabaseStatus" class="pill-muted text-xs">检查中...</span>
         </div>
       </header>
 
-      <!-- 页面切换 tab -->
+      <!-- 页面切换 -->
       <div class="mt-4 mb-3 flex items-center gap-3">
-        <button
-          class="nav-tab nav-tab-active"
-          onclick="window.location.href='title.html'"
-        >
-          标题
-        </button>
-        <button
-          class="nav-tab"
-          onclick="window.location.href='content.html'"
-        >
-          文案
-        </button>
+        <button class="nav-tab nav-tab-active">标题</button>
+        <button class="nav-tab" onclick="location.href='content.html'">文案</button>
       </div>
 
       <main class="layout">
-        <!-- 左侧分类面板 -->
-        <aside class="panel w-full md:w-64 md:flex-shrink-0">
-  <div class="flex items-center justify-between mb-3">
-    <div class="text-sm font-semibold">分类</div>
-    <div class="flex gap-2">
-      <button
-        id="btnAddCategory"
-        class="function-btn ghost text-xs"
-      >
-        新增分类
-      </button>
-      <button
-        id="btnDeleteCategory"
-        class="function-btn ghost text-xs"
-      >
-        删除分类
-      </button>
-    </div>
-  </div>
-  <ul id="categoryList" class="category-list"></ul>
-</aside>
 
-        <!-- 右侧主内容 -->
+        <!-- 左侧分类 -->
+        <aside class="panel w-full md:w-64 md:flex-shrink-0">
+          <div class="flex items-center justify-between mb-3">
+            <div class="text-sm font-semibold">分类</div>
+            <div class="flex gap-2">
+              <button id="btnAddCategory" class="function-btn ghost text-xs">新增分类</button>
+              <button id="btnDeleteCategory" class="function-btn ghost text-xs">删除分类</button>
+            </div>
+          </div>
+          <ul id="categoryList" class="category-list"></ul>
+        </aside>
+
+        <!-- 右侧 -->
         <section class="flex-1 min-w-0 flex flex-col gap-3">
 
           <!-- 工具栏 -->
           <div class="panel">
-           <div class="toolbar flex items-center gap-3 flex-wrap mb-2">
-  <!-- 搜索：用统一输入样式，再控制宽度 -->
-  <input
-    id="searchInput"
-    type="text"
-    placeholder="搜索标题关键词"
-    class="field-input search-input"
-  />
-
-  <!-- 场景：同样用统一输入样式 -->
-  <select id="filterScene" class="field-input filter-select">
-    <option value="">场景（全部）</option>
-    <option value="港迪城堡">港迪城堡</option>
-    <option value="烟花">烟花</option>
-    <option value="夜景">夜景</option>
-    <option value="香港街拍">香港街拍</option>
-  </select>
-
-
-              <!-- 内容类型筛选：保留给 JS，用 CSS/行内隐藏 -->
-              <select
-                id="filterContentType"
-                class="filter-select"
-                style="display:none"
-              >
-                <option value="">内容类型（全部）</option>
-                <option value="展示">出片展示</option>
-                <option value="攻略">攻略 / 机位</option>
-                <option value="服务">服务推荐</option>
-                <option value="节日">节日主题</option>
+            <div class="toolbar flex items-center gap-3 flex-wrap mb-2">
+              <input id="searchInput" type="text" class="field-input search-input" placeholder="搜索标题关键词" />
+              <select id="filterScene" class="field-input filter-select">
+                <option value="">场景（全部）</option>
+                <option value="港迪城堡">港迪城堡</option>
+                <option value="烟花">烟花</option>
+                <option value="夜景">夜景</option>
+                <option value="香港街拍">香港街拍</option>
               </select>
             </div>
 
-            <!-- 按钮工具区：新增标题 / 批量导入 + 5 个管理按钮 -->
             <div class="flex flex-wrap items-center gap-2 mt-1">
-              <button id="btnNewTitle" class="function-btn">
-                新增标题
-              </button>
-              <button id="btnBatchImport" class="function-btn ghost">
-                批量导入
-              </button>
+              <button id="btnNewTitle" class="function-btn">新增标题</button>
+              <button id="btnBatchImport" class="function-btn ghost">批量导入</button>
 
               <div class="extra-actions flex flex-wrap items-center gap-2 ml-auto">
-                <button id="btnClearAll" class="function-btn ghost">
-                  清空全部
-                </button>
-                <button id="btnSettings" class="function-btn ghost">
-                  设置页面
-                </button>
-                <button id="btnSaveCloud" class="function-btn ghost">
-                  保存云端
-                </button>
-                <button id="btnLoadCloud" class="function-btn ghost">
-                  加载云端
-                </button>
-                <button id="btnManagePage" class="function-btn ghost">
-                  管理页面
-                </button>
+                <button id="btnClearAll" class="function-btn ghost">清空全部</button>
+                <button id="btnSettings" class="function-btn ghost">设置页面</button>
+                <button id="btnSaveCloud" class="function-btn ghost">保存云端</button>
+                <button id="btnLoadCloud" class="function-btn ghost">加载云端</button>
+                <button id="btnManagePage" class="function-btn ghost">管理页面</button>
               </div>
             </div>
           </div>
 
           <!-- 桌面表格 -->
           <div class="panel hidden md:block">
-            <table class="basic-table w-full" id="titleTable">
+            <table class="basic-table w-full">
               <thead>
                 <tr>
                   <th class="w-12">#</th>
@@ -168,48 +113,36 @@
             </table>
           </div>
 
-          <!-- 移动端卡片列表 -->
+          <!-- 手机列表 -->
           <div class="md:hidden flex flex-col gap-2" id="mobileList"></div>
 
         </section>
       </main>
 
+      <!-- 云端快照弹出层 -->
+      <div id="cloudHistoryPanel" class="cloud-history-panel hidden"></div>
+
       <!-- 标题弹窗 -->
-      <div
-        id="titleModal"
-        class="modal-backdrop hidden"
-      >
+      <div id="titleModal" class="modal-backdrop hidden">
         <div class="modal">
           <div class="modal-header">
             <div id="titleModalTitle" class="modal-title">新增标题</div>
-            <button
-              id="btnCloseModal"
-              class="icon-btn"
-              aria-label="关闭"
-            >
-              ×
-            </button>
+            <button id="btnCloseModal" class="icon-btn">×</button>
           </div>
 
           <div class="modal-body space-y-3">
             <div>
               <label class="field-label">标题内容</label>
-              <textarea
-                id="fieldText"
-                class="field-input"
-                rows="3"
-                placeholder="请输入标题"
-              ></textarea>
+              <textarea id="fieldText" class="field-input" rows="3"></textarea>
             </div>
 
-            <div class="flex flex-wrap gap-3">
-              <div class="flex-1 min-w-[120px]">
+            <div class="flex gap-3 flex-wrap">
+              <div class="flex-1">
                 <label class="field-label">主分类</label>
                 <select id="fieldMainCategory" class="field-input"></select>
               </div>
 
-              <!-- 内容类型保留字段，后续可用；若不需要可用 CSS 隐藏 -->
-              <div class="flex-1 min-w-[120px]">
+              <div class="flex-1">
                 <label class="field-label">内容类型</label>
                 <select id="fieldContentType" class="field-input">
                   <option value="">自动识别</option>
@@ -222,88 +155,48 @@
             </div>
 
             <div>
-              <label class="field-label">场景标签（可选，多项用逗号分隔）</label>
-              <input
-                id="fieldSceneTags"
-                type="text"
-                class="field-input"
-                placeholder="例如：港迪城堡, 烟花, 夜景"
-              />
+              <label class="field-label">场景标签（逗号分隔）</label>
+              <input id="fieldSceneTags" type="text" class="field-input" placeholder="如：港迪城堡, 烟花" />
             </div>
           </div>
 
           <div class="modal-footer">
-            <button
-              id="btnCancelModal"
-              class="function-btn ghost"
-            >
-              取消
-            </button>
-            <button
-              id="btnSaveTitle"
-              class="function-btn"
-            >
-              保存
-            </button>
+            <button id="btnCancelModal" class="function-btn ghost">取消</button>
+            <button id="btnSaveTitle" class="function-btn">保存</button>
           </div>
         </div>
       </div>
 
       <!-- 批量导入弹窗 -->
-      <div
-        id="importModal"
-        class="modal-backdrop hidden"
-      >
+      <div id="importModal" class="modal-backdrop hidden">
         <div class="modal modal-lg">
           <div class="modal-header">
             <div class="modal-title">批量导入标题</div>
-            <button
-              id="btnCloseImport"
-              class="icon-btn"
-              aria-label="关闭"
-            >
-              ×
-            </button>
+            <button id="btnCloseImport" class="icon-btn">×</button>
           </div>
 
           <div class="modal-body grid gap-3 md:grid-cols-2">
-            <div class="space-y-2">
-              <label class="field-label">多行标题（每行一条）</label>
-              <textarea
-                id="importRawInput"
-                class="field-input"
-                rows="12"
-                placeholder="粘贴多行标题，每行一条"
-              ></textarea>
+            <div>
+              <label class="field-label">多行标题</label>
+              <textarea id="importRawInput" class="field-input" rows="12"></textarea>
             </div>
-            <div class="space-y-2">
+
+            <div>
               <label class="field-label">识别预览</label>
-              <div
-                id="importPreview"
-                class="preview-box"
-              ></div>
+              <div id="importPreview" class="preview-box"></div>
             </div>
           </div>
 
           <div class="modal-footer">
-            <button
-              id="btnCancelImport"
-              class="function-btn ghost"
-            >
-              取消
-            </button>
-            <button
-              id="btnRunImport"
-              class="function-btn"
-            >
-              识别并导入
-            </button>
+            <button id="btnCancelImport" class="function-btn ghost">取消</button>
+            <button id="btnRunImport" class="function-btn">识别并导入</button>
           </div>
         </div>
       </div>
 
       <!-- Toast -->
       <div id="toast" class="toast hidden"></div>
+
     </div>
   </body>
 </html>
