@@ -7,7 +7,7 @@
 // 3. 云端只用 title_snapshots 表做快照（保存 / 加载）
 // 4. 快照保存时记录每行顺序 _orderIndex，加载时按该顺序还原
 // 5. 批量导入保持正序：按输入顺序 append 到列表尾部
-// 6. 手机端有“分类”下拉按钮（setupMobileCategoryDropdown）
+// 6. 手机端有“分类”下拉按钮，左侧分类面板仅在桌面端显示
 // 7. 复制 / 修改 / 删除按钮统一加 btn-inline 类，方便 CSS 控制一排显示
 
 console.log('[TitleApp] app-title.js loaded');
@@ -41,13 +41,25 @@ const state = {
 
 let toastTimer = null;
 
+// 云端下拉外部点击监听
+let cloudOutsideHandlerAttached = false;
+
+// 保存快照名弹窗回调
+let snapshotNameConfirm = null;
+
 // --------- 1. 初始化入口 ---------
 
 document.addEventListener('DOMContentLoaded', () => {
   console.log('[TitleApp] DOMContentLoaded: init');
 
-  // 先搭好手机端分类下拉 DOM
+  // 手机端分类下拉 DOM
   setupMobileCategoryDropdown();
+
+  // 把左侧分类面板改成：手机端隐藏，桌面端显示
+  const aside = document.querySelector('.layout > aside.panel');
+  if (aside) {
+    aside.classList.add('hidden', 'md:block');
+  }
 
   // 分类
   loadCategoriesFromLocal();
@@ -70,7 +82,6 @@ document.addEventListener('DOMContentLoaded', () => {
   } else {
     console.log('[TitleApp] supabaseClient 已就绪（仅用于 title_snapshots 快照）');
   }
-  // 不再自动从云端任何表加载标题
 });
 
 // ================================
@@ -152,7 +163,6 @@ function setupMobileCategoryDropdown() {
 
   const trigger = document.createElement('button');
   trigger.id = 'mobileCategoryTrigger';
-  // 具体样式交给 CSS；这里只加一些语义类名
   trigger.className = 'function-btn w-full flex items-center justify-between';
   trigger.innerHTML =
     '<span class="text-sm">分类</span><span id="mobileCategoryLabel" class="text-sm font-medium"></span>';
@@ -584,8 +594,8 @@ function saveTitleFromModal() {
       t.id === state.editingId ? { ...t, ...payload } : t
     );
   } else {
+    // 新增标题：追加到列表末尾，保持 1、2、3… 正序
     state.titles.push({
-      // 新增标题默认追加在最后，行号从 1、2、3… 正常往下排
       id: genId(),
       usage_count: 0,
       ...payload
@@ -736,40 +746,130 @@ function applySnapshotPayload(payload) {
   renderTitles();
 }
 
+// 自定义快照名称弹窗（居中）
+function openSnapshotNameModal(onConfirm) {
+  snapshotNameConfirm = onConfirm;
+
+  let backdrop = document.getElementById('snapshotNameModal');
+  let input, btnOk, btnCancel;
+
+  if (!backdrop) {
+    backdrop = document.createElement('div');
+    backdrop.id = 'snapshotNameModal';
+    backdrop.className = 'modal-backdrop hidden';
+
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+
+    modal.innerHTML = `
+      <div class="modal-header">
+        <div class="modal-title">保存云端快照</div>
+        <button class="icon-btn" id="snapshotCloseBtn" aria-label="关闭">×</button>
+      </div>
+      <div class="modal-body space-y-3">
+        <div>
+          <label class="field-label">快照名称</label>
+          <input id="snapshotNameInput" type="text" class="field-input" placeholder="例如：1115" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="function-btn ghost" id="snapshotCancelBtn">取消</button>
+        <button class="function-btn" id="snapshotOkBtn">保存</button>
+      </div>
+    `;
+
+    backdrop.appendChild(modal);
+    document.body.appendChild(backdrop);
+
+    input = modal.querySelector('#snapshotNameInput');
+    btnOk = modal.querySelector('#snapshotOkBtn');
+    btnCancel = modal.querySelector('#snapshotCancelBtn');
+    const btnClose = modal.querySelector('#snapshotCloseBtn');
+
+    const close = () => {
+      backdrop.classList.add('hidden');
+      backdrop.style.display = 'none';
+    };
+
+    btnCancel.addEventListener('click', () => {
+      snapshotNameConfirm = null;
+      close();
+    });
+
+    if (btnClose) {
+      btnClose.addEventListener('click', () => {
+        snapshotNameConfirm = null;
+        close();
+      });
+    }
+
+    btnOk.addEventListener('click', async () => {
+      const name = input.value.trim();
+      if (!name) {
+        showToast('请输入快照名称', 'error');
+        return;
+      }
+      const fn = snapshotNameConfirm;
+      snapshotNameConfirm = null;
+      close();
+      if (typeof fn === 'function') {
+        await fn(name);
+      }
+    });
+
+    input.addEventListener('keydown', async (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        btnOk.click();
+      }
+    });
+  } else {
+    const modal = backdrop.querySelector('.modal');
+    input = modal.querySelector('#snapshotNameInput');
+  }
+
+  // 重置输入 & 显示
+  if (input) {
+    input.value = '';
+    setTimeout(() => input.focus(), 0);
+  }
+  backdrop.classList.remove('hidden');
+  backdrop.style.display = 'flex';
+}
+
 async function saveCloudSnapshot() {
   if (!supabase) {
     alert('未配置 Supabase，无法保存云端快照');
     return;
   }
 
-  let payload = collectSnapshotPayload();
-  const name = prompt('请输入快照名称：');
-  if (!name) return;
+  openSnapshotNameModal(async (name) => {
+    let payload = collectSnapshotPayload();
+    payload.snapshot_label = name.trim() || '快照';
+    payload.updated_at = Date.now();
+    const nowIso = new Date(payload.updated_at).toISOString();
 
-  payload.snapshot_label = name.trim() || '快照';
-  payload.updated_at = Date.now();
-  const nowIso = new Date(payload.updated_at).toISOString();
+    try {
+      await supabase.from(SNAPSHOT_TABLE).upsert({
+        key: SNAPSHOT_DEFAULT_KEY,
+        payload,
+        updated_at: nowIso
+      });
 
-  try {
-    await supabase.from(SNAPSHOT_TABLE).upsert({
-      key: SNAPSHOT_DEFAULT_KEY,
-      payload,
-      updated_at: nowIso
-    });
+      const histKey = 'snap_' + payload.updated_at;
+      await supabase.from(SNAPSHOT_TABLE).insert({
+        key: histKey,
+        payload,
+        updated_at: nowIso
+      });
 
-    const histKey = 'snap_' + payload.updated_at;
-    await supabase.from(SNAPSHOT_TABLE).insert({
-      key: histKey,
-      payload,
-      updated_at: nowIso
-    });
-
-    showToast('已保存云端快照');
-    await renderCloudHistoryList();
-  } catch (e) {
-    console.error('[TitleApp] saveCloudSnapshot error', e);
-    alert('保存云端失败：' + (e.message || String(e)));
-  }
+      showToast('已保存云端快照');
+      await renderCloudHistoryList();
+    } catch (e) {
+      console.error('[TitleApp] saveCloudSnapshot error', e);
+      alert('保存云端失败：' + (e.message || String(e)));
+    }
+  });
 }
 
 async function renderCloudHistoryList() {
@@ -787,7 +887,7 @@ async function renderCloudHistoryList() {
       .from(SNAPSHOT_TABLE)
       .select('key,payload,updated_at')
       .order('updated_at', { ascending: false })
-      .limit(50);
+      .limit(5); // 只取最近 5 个
 
     if (error) throw error;
 
@@ -858,14 +958,22 @@ async function loadCloudSnapshot(key) {
 
     applySnapshotPayload(data.payload);
     showToast('云端快照已加载');
-    const panel = document.getElementById('cloudHistoryPanel');
-    if (panel) {
-      panel.classList.add('hidden');
-      panel.style.display = 'none';
-    }
+    hideCloudPanel();
   } catch (e) {
     console.error('[TitleApp] loadCloudSnapshot error', e);
     alert('加载云端失败：' + (e.message || String(e)));
+  }
+}
+
+function hideCloudPanel() {
+  const panel = document.getElementById('cloudHistoryPanel');
+  if (!panel) return;
+  panel.classList.add('hidden');
+  panel.style.display = 'none';
+
+  if (cloudOutsideHandlerAttached) {
+    document.removeEventListener('click', handleClickOutsideCloud, true);
+    cloudOutsideHandlerAttached = false;
   }
 }
 
@@ -873,14 +981,46 @@ async function toggleCloudHistoryPanel() {
   const panel = document.getElementById('cloudHistoryPanel');
   if (!panel) return;
 
-  if (panel.classList.contains('hidden') || panel.style.display === 'none') {
+  const isHidden =
+    panel.classList.contains('hidden') || panel.style.display === 'none';
+
+  if (isHidden) {
+    // 打开：作为“加载云端”按钮下面的下拉面板
     panel.classList.remove('hidden');
     panel.style.display = 'block';
+
+    const btnLoad = document.getElementById('btnLoadCloud');
+    if (btnLoad) {
+      const rect = btnLoad.getBoundingClientRect();
+      panel.style.position = 'absolute';
+      panel.style.top = `${rect.bottom + window.scrollY + 8}px`;
+      // 靠右一点，避免超出屏幕
+      const right = Math.max(16, window.innerWidth - rect.right);
+      panel.style.right = `${right}px`;
+      panel.style.left = 'auto';
+      panel.style.zIndex = '50';
+    }
+
     await renderCloudHistoryList();
+
+    if (!cloudOutsideHandlerAttached) {
+      document.addEventListener('click', handleClickOutsideCloud, true);
+      cloudOutsideHandlerAttached = true;
+    }
   } else {
-    panel.classList.add('hidden');
-    panel.style.display = 'none';
+    hideCloudPanel();
   }
+}
+
+function handleClickOutsideCloud(e) {
+  const panel = document.getElementById('cloudHistoryPanel');
+  const btn = document.getElementById('btnLoadCloud');
+  if (!panel) return;
+
+  if (panel.contains(e.target) || (btn && btn.contains(e.target))) {
+    return;
+  }
+  hideCloudPanel();
 }
 
 function bindCloudButtons() {
