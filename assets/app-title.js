@@ -253,41 +253,38 @@ function renderTitles() {
   const mobileList = document.getElementById('mobileList');
   if (!tbody || !mobileList) return;
 
+  // 清空原有内容
   tbody.innerHTML = '';
   mobileList.innerHTML = '';
 
   const list = applyFilters(state.titles);
 
   list.forEach((item, index) => {
-    // 桌面端行
+    // ---------- 桌面端行 ----------
     const tr = document.createElement('tr');
 
+    // # 序号
     const tdIndex = document.createElement('td');
     tdIndex.textContent = index + 1;
     tr.appendChild(tdIndex);
 
+    // 标题
     const tdText = document.createElement('td');
     tdText.textContent = item.text || '';
     tr.appendChild(tdText);
 
+    // 主分类
     const tdCat = document.createElement('td');
     tdCat.textContent = item.main_category || '';
     tr.appendChild(tdCat);
 
-    const tdScene = document.createElement('td');
-    tdScene.textContent = Array.isArray(item.scene_tags)
-      ? item.scene_tags.join(', ')
-      : '';
-    tr.appendChild(tdScene);
-
-    const tdType = document.createElement('td');
-    tdType.textContent = item.content_type || '';
-    tr.appendChild(tdType);
-
+    // 使用次数
     const tdUsage = document.createElement('td');
+    tdUsage.className = 'text-center';
     tdUsage.textContent = item.usage_count || 0;
     tr.appendChild(tdUsage);
 
+    // 操作按钮
     const tdActions = document.createElement('td');
     tdActions.className = 'actions-cell';
 
@@ -315,7 +312,7 @@ function renderTitles() {
 
     tbody.appendChild(tr);
 
-    // 移动端卡片
+    // ---------- 移动端卡片 ----------
     const card = document.createElement('div');
     card.className = 'panel mobile-card';
 
@@ -325,9 +322,9 @@ function renderTitles() {
 
     const cMeta = document.createElement('div');
     cMeta.className = 'text-xs text-gray-500 mb-2';
-    cMeta.textContent =
-      '[' + (item.main_category || '未分类') + '] ' +
-      (Array.isArray(item.scene_tags) ? item.scene_tags.join(', ') : '');
+    cMeta.textContent = item.main_category
+      ? '[' + item.main_category + ']'
+      : '[未分类]';
 
     const actions = document.createElement('div');
     actions.className = 'flex gap-2';
@@ -360,6 +357,7 @@ function renderTitles() {
     mobileList.appendChild(empty);
   }
 }
+
 
 // --------- 5. 标题操作：复制 / 删除 ---------
 
