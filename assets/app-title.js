@@ -1,10 +1,14 @@
 // assets/app-title.js
 // 标题管理主逻辑（桌面表格 + 手机卡片）
-// 本版逻辑：
-// 1. 所有标题数据本地优先，存 localStorage
-// 2. “清除全部”只清本地，不再从云端自动恢复
-// 3. 云端只用于快照备份（title_snapshots），不再直接操作 titles 表
-// 4. 保存快照时记录每一行的顺序(_orderIndex)，读取快照时按这个顺序还原
+//
+// 逻辑说明：
+// 1. 标题数据本地优先，持久化在 localStorage（TITLE_LS_KEY）
+// 2. “清除全部”只清本地，不去动云端任何表
+// 3. 云端只用 title_snapshots 表做快照（保存 / 加载）
+// 4. 快照保存时记录每行顺序 _orderIndex，加载时按该顺序还原
+// 5. 批量导入保持正序：按输入顺序 append 到列表尾部
+// 6. 手机端有“分类”下拉按钮（setupMobileCategoryDropdown）
+// 7. 复制 / 修改 / 删除按钮统一加 btn-inline 类，方便 CSS 控制一排显示
 
 console.log('[TitleApp] app-title.js loaded');
 
@@ -24,7 +28,7 @@ const SNAPSHOT_TABLE = 'title_snapshots';
 const SNAPSHOT_DEFAULT_KEY = 'default';
 
 const state = {
-  titles: [],             // 当前所有标题记录 [{id,text,main_category,content_type,scene_tags[],usage_count}]
+  titles: [], // [{id,text,main_category,content_type,scene_tags[],usage_count}]
   categories: [...DEFAULT_CATEGORIES],
   currentCategory: '全部',
   filters: {
@@ -42,6 +46,9 @@ let toastTimer = null;
 document.addEventListener('DOMContentLoaded', () => {
   console.log('[TitleApp] DOMContentLoaded: init');
 
+  // 先搭好手机端分类下拉 DOM
+  setupMobileCategoryDropdown();
+
   // 分类
   loadCategoriesFromLocal();
   renderCategoryList();
@@ -54,7 +61,7 @@ document.addEventListener('DOMContentLoaded', () => {
   bindCloudButtons();
   bindGlobalNavButtons();
 
-  // 先尝试从本地恢复标题（唯一自动来源）
+  // 标题：只从本地恢复
   loadTitlesFromLocal();
   renderTitles();
 
@@ -63,12 +70,11 @@ document.addEventListener('DOMContentLoaded', () => {
   } else {
     console.log('[TitleApp] supabaseClient 已就绪（仅用于 title_snapshots 快照）');
   }
-
-  // 注意：这里不再自动从云端任何表加载标题
+  // 不再自动从云端任何表加载标题
 });
 
 // ================================
-// 2. 分类逻辑（本地）
+// 2. 分类逻辑（本地 + 手机端下拉）
 // ================================
 
 function loadCategoriesFromLocal() {
@@ -100,24 +106,83 @@ function saveCategoriesToLocal() {
   }
 }
 
+// 统一渲染桌面端 + 手机端分类列表
 function renderCategoryList() {
-  const list = document.getElementById('categoryList');
-  if (!list) return;
+  const desktopList = document.getElementById('categoryList');
+  const mobileList = document.getElementById('mobileCategoryList');
 
-  list.innerHTML = '';
-  state.categories.forEach((cat) => {
-    const li = document.createElement('li');
-    li.className =
-      'category-item' + (cat === state.currentCategory ? ' active' : '');
-    li.textContent = cat;
-    li.dataset.cat = cat;
-    li.addEventListener('click', () => {
-      state.currentCategory = cat;
-      renderCategoryList();
-      renderTitles();
+  const buildList = (ul) => {
+    if (!ul) return;
+    ul.innerHTML = '';
+    state.categories.forEach((cat) => {
+      const li = document.createElement('li');
+      li.className =
+        'category-item' + (cat === state.currentCategory ? ' active' : '');
+      li.textContent = cat;
+      li.dataset.cat = cat;
+      li.addEventListener('click', () => {
+        state.currentCategory = cat;
+        renderCategoryList();
+        renderTitles();
+        // 选中后自动收起手机端下拉
+        const dropdown = document.getElementById('mobileCategoryDropdown');
+        if (dropdown) {
+          dropdown.classList.add('hidden');
+        }
+      });
+      ul.appendChild(li);
     });
-    list.appendChild(li);
+  };
+
+  buildList(desktopList);
+  buildList(mobileList);
+
+  updateMobileCategoryLabel();
+}
+
+// 手机端分类按钮 & 下拉 DOM 搭建
+function setupMobileCategoryDropdown() {
+  const layout = document.querySelector('.layout');
+  if (!layout) return;
+  if (document.getElementById('mobileCategoryWrapper')) return; // 已创建
+
+  const wrapper = document.createElement('div');
+  wrapper.id = 'mobileCategoryWrapper';
+  wrapper.className = 'md:hidden mb-3';
+
+  const trigger = document.createElement('button');
+  trigger.id = 'mobileCategoryTrigger';
+  // 具体样式交给 CSS；这里只加一些语义类名
+  trigger.className = 'function-btn w-full flex items-center justify-between';
+  trigger.innerHTML =
+    '<span class="text-sm">分类</span><span id="mobileCategoryLabel" class="text-sm font-medium"></span>';
+
+  const dropdown = document.createElement('div');
+  dropdown.id = 'mobileCategoryDropdown';
+  dropdown.className = 'mobile-category-dropdown hidden mt-2 panel';
+
+  const ul = document.createElement('ul');
+  ul.id = 'mobileCategoryList';
+  ul.className = 'category-list';
+  dropdown.appendChild(ul);
+
+  wrapper.appendChild(trigger);
+  wrapper.appendChild(dropdown);
+
+  // 插在整个 layout 的最前面（手机端显示在分类列表上面）
+  layout.insertBefore(wrapper, layout.firstChild);
+
+  trigger.addEventListener('click', () => {
+    dropdown.classList.toggle('hidden');
   });
+}
+
+// 更新手机端按钮上的“当前分类”文字
+function updateMobileCategoryLabel() {
+  const labelEl = document.getElementById('mobileCategoryLabel');
+  if (labelEl) {
+    labelEl.textContent = state.currentCategory;
+  }
 }
 
 function bindCategoryButtons() {
@@ -232,7 +297,7 @@ function bindToolbar() {
     });
   }
 
-  // ⚠ 清除全部：只清本地，不动云端
+  // 清除全部：只清本地，不动云端
   if (btnClearAll) {
     btnClearAll.addEventListener('click', () => {
       if (!confirm('确定清空当前所有标题？仅清除本地数据，不影响云端快照。')) return;
@@ -310,17 +375,17 @@ function renderTitles() {
     group.className = 'action-group';
 
     const btnCopy = document.createElement('button');
-    btnCopy.className = 'function-btn ghost text-xs';
+    btnCopy.className = 'function-btn ghost text-xs btn-inline';
     btnCopy.textContent = '复制';
     btnCopy.addEventListener('click', () => copyTitle(item));
 
     const btnEdit = document.createElement('button');
-    btnEdit.className = 'function-btn ghost text-xs';
+    btnEdit.className = 'function-btn ghost text-xs btn-inline';
     btnEdit.textContent = '修改';
     btnEdit.addEventListener('click', () => openTitleModal(item));
 
     const btnDel = document.createElement('button');
-    btnDel.className = 'function-btn ghost text-xs';
+    btnDel.className = 'function-btn ghost text-xs btn-inline';
     btnDel.textContent = '删除';
     btnDel.addEventListener('click', () => deleteTitle(item));
 
@@ -348,17 +413,17 @@ function renderTitles() {
     actions.className = 'flex gap-2';
 
     const mCopy = document.createElement('button');
-    mCopy.className = 'function-btn ghost text-xs';
+    mCopy.className = 'function-btn ghost text-xs btn-inline';
     mCopy.textContent = '复制';
     mCopy.addEventListener('click', () => copyTitle(item));
 
     const mEdit = document.createElement('button');
-    mEdit.className = 'function-btn ghost text-xs';
+    mEdit.className = 'function-btn ghost text-xs btn-inline';
     mEdit.textContent = '修改';
     mEdit.addEventListener('click', () => openTitleModal(item));
 
     const mDel = document.createElement('button');
-    mDel.className = 'function-btn ghost text-xs';
+    mDel.className = 'function-btn ghost text-xs btn-inline';
     mDel.textContent = '删除';
     mDel.addEventListener('click', () => deleteTitle(item));
 
@@ -389,7 +454,7 @@ async function copyTitle(item) {
     showToast('复制失败', 'error');
   }
 
-  // 只在本地增加使用次数
+  // 本地增加使用次数
   state.titles = state.titles.map((t) =>
     t.id === item.id ? { ...t, usage_count: (t.usage_count || 0) + 1 } : t
   );
@@ -477,7 +542,12 @@ function closeTitleModal() {
 }
 
 function genId() {
-  return 't_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
+  return (
+    't_' +
+    Date.now().toString(36) +
+    '_' +
+    Math.random().toString(36).slice(2, 8)
+  );
 }
 
 function saveTitleFromModal() {
@@ -514,7 +584,8 @@ function saveTitleFromModal() {
       t.id === state.editingId ? { ...t, ...payload } : t
     );
   } else {
-    state.titles.unshift({
+    state.titles.push({
+      // 新增标题默认追加在最后，行号从 1、2、3… 正常往下排
       id: genId(),
       usage_count: 0,
       ...payload
@@ -546,8 +617,18 @@ function openImportModal() {
   const input = document.getElementById('importRawInput');
   const preview = document.getElementById('importPreview');
   if (!modal) return;
+
   if (input) input.value = '';
-  if (preview) preview.innerHTML = '';
+
+  // 识别预览功能取消：直接隐藏右侧那一列
+  if (preview) {
+    const wrapper = preview.parentElement; // 包着 label+preview 的 div
+    if (wrapper) {
+      wrapper.style.display = 'none';
+    }
+    preview.innerHTML = '';
+  }
+
   modal.classList.remove('hidden');
   modal.style.display = 'flex';
 }
@@ -559,6 +640,7 @@ function closeImportModal() {
   modal.style.display = 'none';
 }
 
+// 批量导入：保持正序（按文本从上到下 append 到列表末尾）
 function runImport() {
   const input = document.getElementById('importRawInput');
   if (!input) return;
@@ -582,10 +664,9 @@ function runImport() {
   const currentCat =
     state.currentCategory !== '全部' ? state.currentCategory : null;
 
-  const now = Date.now();
-  lines.forEach((text, idx) => {
-    state.titles.unshift({
-      id: genId() + '_' + idx,
+  lines.forEach((text) => {
+    state.titles.push({
+      id: genId(),
       text,
       main_category: currentCat,
       content_type: null,
@@ -604,15 +685,15 @@ function runImport() {
 // 9. 云端快照：保存 / 加载 / 列表（title_snapshots）
 // ================================
 
+// 保存时记录当前顺序 _orderIndex
 function collectSnapshotPayload() {
-  // 关键：保存时候把当前顺序一起记录下来
   const titlesWithOrder = state.titles.map((t, idx) => ({
     ...t,
     _orderIndex: idx
   }));
 
   return {
-    ver: 2, // 新版本快照
+    ver: 2,
     snapshot_label: '',
     updated_at: Date.now(),
     titles: titlesWithOrder,
@@ -626,7 +707,6 @@ function applySnapshotPayload(payload) {
 
   let titles = Array.isArray(payload.titles) ? payload.titles.slice() : [];
 
-  // 按 _orderIndex 排序，保证读取时顺序 = 保存时顺序
   titles.sort((a, b) => {
     const ai =
       typeof a._orderIndex === 'number'
@@ -639,7 +719,6 @@ function applySnapshotPayload(payload) {
     return ai - bi;
   });
 
-  // 去掉内部字段 _orderIndex
   titles = titles.map((t) => {
     const { _orderIndex, ...rest } = t;
     return rest;
@@ -672,16 +751,12 @@ async function saveCloudSnapshot() {
   const nowIso = new Date(payload.updated_at).toISOString();
 
   try {
-    // 默认键覆盖
-    await supabase
-      .from(SNAPSHOT_TABLE)
-      .upsert({
-        key: SNAPSHOT_DEFAULT_KEY,
-        payload,
-        updated_at: nowIso
-      });
+    await supabase.from(SNAPSHOT_TABLE).upsert({
+      key: SNAPSHOT_DEFAULT_KEY,
+      payload,
+      updated_at: nowIso
+    });
 
-    // 历史记录一条
     const histKey = 'snap_' + payload.updated_at;
     await supabase.from(SNAPSHOT_TABLE).insert({
       key: histKey,
@@ -758,7 +833,7 @@ async function renderCloudHistoryList() {
     });
   } catch (e) {
     console.error('[TitleApp] renderCloudHistoryList error', e);
-  panel.innerHTML =
+    panel.innerHTML =
       '<div style="padding:8px 10px;color:#f43f5e;">加载云端快照失败</div>';
   }
 }
@@ -826,14 +901,12 @@ function bindGlobalNavButtons() {
 
   if (btnSettings) {
     btnSettings.addEventListener('click', () => {
-      // 之后你可以改成 window.location.href='settings.html'
       alert('设置页面（占位），后续可跳转 settings.html');
     });
   }
 
   if (btnManage) {
     btnManage.addEventListener('click', () => {
-      // 之后你可以改成 window.location.href='admin-center.html'
       alert('管理页面（占位），后续可跳转 admin-center.html');
     });
   }
