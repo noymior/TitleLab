@@ -112,7 +112,7 @@
               </button>
 
               <div
-                class="extra-actions flex flex-wrap items-center gap-2 ml-auto"
+                class="extra-actions flex flex-wrap items-center gap-2 ml-auto relative"
               >
                 <button id="btnClearAll" class="function-btn ghost">
                   清空全部
@@ -129,34 +129,36 @@
                 <button id="btnManagePage" class="function-btn ghost">
                   管理页面
                 </button>
+
+                <!-- 云端快照下拉菜单：挂在加载云端按钮所在区域 -->
+                <div
+                  id="cloudHistoryPanel"
+                  class="cloud-history-panel hidden"
+                ></div>
               </div>
             </div>
           </div>
 
-         <!-- 桌面表格：仅在 md 及以上设备显示 -->
-<div class="panel hidden md:block">
-  <table class="basic-table w-full">
-    <thead>
-      <tr>
-        <th class="w-12">#</th>
-        <th class="text-left">标题</th>
-        <th class="w-28 text-left">主分类</th>
-        <th class="w-16 text-center">使用</th>
-        <th class="w-40 text-center">操作</th>
-      </tr>
-    </thead>
-    <tbody id="titleTableBody"></tbody>
-  </table>
-</div>
+          <!-- 桌面表格：仅在 md 及以上设备显示 -->
+          <div class="panel hidden md:block">
+            <table class="basic-table w-full">
+              <thead>
+                <tr>
+                  <th class="w-12">#</th>
+                  <th class="text-left">标题</th>
+                  <th class="w-28 text-left">主分类</th>
+                  <th class="w-16 text-center">使用</th>
+                  <th class="w-40 text-center">操作</th>
+                </tr>
+              </thead>
+              <tbody id="titleTableBody"></tbody>
+            </table>
+          </div>
 
-<!-- 移动端卡片列表：仅在小屏显示 -->
-<div class="md:hidden flex flex-col gap-2" id="mobileList"></div>
-
+          <!-- 移动端卡片列表：仅在小屏显示 -->
+          <div class="md:hidden flex flex-col gap-2" id="mobileList"></div>
         </section>
       </main>
-
-      <!-- 云端快照弹出层 -->
-      <div id="cloudHistoryPanel" class="cloud-history-panel hidden"></div>
 
       <!-- 标题弹窗 -->
       <div id="titleModal" class="modal-backdrop hidden">
