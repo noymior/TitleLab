@@ -23,7 +23,6 @@ body.bg-page {
   padding: 16px;
 }
 
-
 /* 搜索输入 + 清除按钮包装：一排布局 */
 .search-wrapper {
   display: flex;
@@ -38,9 +37,6 @@ body.bg-page {
   display: none; /* 默认隐藏，JS 里有内容时改成 inline-flex */
   padding-inline: 10px;
 }
-
-
-
 
 /* 顶部栏 */
 
@@ -353,7 +349,7 @@ textarea.field-input {
 }
 
 .mobile-card .function-btn {
-  flex: 1 1 auto;
+  flex: 0 0 auto;
 }
 
 /* Modal */
