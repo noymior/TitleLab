@@ -32,9 +32,9 @@
 
   <body class="bg-page">
     <div class="wrap">
-      <!-- 顶部栏：左 LOGO + 标题，中间 Tab，右 Supabase 状态 -->
+      <!-- 顶部栏 -->
       <header class="topbar">
-        <!-- 左：LOGO + 主标题 -->
+        <!-- 左：Logo + 主标题（蓝色） -->
         <div class="topbar-left">
           <div class="logo-dot"></div>
           <div class="ml-2">
@@ -55,55 +55,55 @@
 
         <!-- 右：Supabase 状态 -->
         <div class="topbar-right">
-          <span id="supabaseStatus" class="pill-muted text-xs">Supabase</span>
+          <span id="supabaseStatus" class="pill-muted text-xs">
+            Supabase 在线
+          </span>
         </div>
       </header>
 
       <main class="layout">
         <!-- 左侧分类面板 -->
-       <aside class="panel w-full md:w-64 md:flex-shrink-0">
-  <!-- 分类标题：上下排 + 居中，在“全部”等分类上方 -->
-  <div class="category-title-main">
-    分<br />类
-  </div>
+        <aside class="panel w-full md:w-64 md:flex-shrink-0">
+          <!-- 按钮行：新增 / 删除 / 排序 -->
+          <div class="flex items-center justify-end mb-3">
+            <div class="flex gap-2">
+              <button id="btnAddCategory" class="function-btn ghost text-xs">
+                新增分类
+              </button>
+              <button
+                id="btnDeleteCategory"
+                class="function-btn ghost text-xs"
+              >
+                删除分类
+              </button>
+              <button id="btnSortCategory" class="function-btn ghost text-xs">
+                排序
+              </button>
+            </div>
+          </div>
 
-  <!-- 按钮行：新增 / 删除 / 排序 -->
-  <div class="flex items-center justify-end mb-3">
-    <div class="flex gap-2">
-      <button id="btnAddCategory" class="function-btn ghost text-xs">
-        新增分类
-      </button>
-      <button id="btnDeleteCategory" class="function-btn ghost text-xs">
-        删除分类
-      </button>
-      <button id="btnSortCategory" class="function-btn ghost text-xs">
-        排序
-      </button>
-    </div>
-  </div>
+          <!-- 手机端：分类下拉触发按钮（桌面端隐藏） -->
+          <div id="mobileCategoryWrapper" class="md:hidden mb-2">
+            <button
+              id="mobileCategoryToggle"
+              type="button"
+              class="function-btn ghost w-full flex items-center justify-between"
+            >
+              <span id="mobileCategoryLabel">全部</span>
+              <span class="text-xs text-gray-600">分类 ▾</span>
+            </button>
+          </div>
 
-  <!-- 手机端：分类下拉触发按钮（桌面端隐藏） -->
-  <div id="mobileCategoryWrapper" class="md:hidden mb-2">
-    <button
-      id="mobileCategoryToggle"
-      type="button"
-      class="function-btn ghost w-full flex items-center justify-between"
-    >
-      <span id="mobileCategoryLabel">全部</span>
-      <span class="text-xs text-gray-600">分类 ▾</span>
-    </button>
-  </div>
-
-  <!-- 共用一份分类列表：桌面直接显示，手机端通过 JS 做显示/隐藏 -->
-  <ul id="categoryList" class="category-list"></ul>
-</aside>
+          <!-- 共用一份分类列表：桌面直接显示，手机端通过 JS 控制显示/隐藏 -->
+          <ul id="categoryList" class="category-list"></ul>
+        </aside>
 
         <!-- 右侧主内容 -->
         <section class="flex-1 min-w-0 flex flex-col gap-3">
           <!-- 工具栏 -->
           <div class="panel">
             <div class="toolbar flex items-center gap-3 flex-wrap mb-2">
-              <!-- 搜索框 + X 清空 -->
+              <!-- 搜索框 + 清空 X -->
               <div class="search-wrapper">
                 <input
                   id="searchInput"
@@ -131,7 +131,6 @@
 
             <!-- 按钮工具区 -->
             <div class="flex flex-wrap items-center gap-2 mt-1">
-              <!-- 这里加了 onclick，直接调全局函数 -->
               <button
                 id="btnNewTitle"
                 class="function-btn"
@@ -190,7 +189,7 @@
         </section>
       </main>
 
-      <!-- 云端快照弹出层（位置由 JS 计算） -->
+      <!-- 云端快照弹出层 -->
       <div id="cloudHistoryPanel" class="cloud-history-panel hidden"></div>
 
       <!-- 标题弹窗 -->
@@ -272,8 +271,6 @@
                 placeholder="粘贴多行标题，每行一条"
               ></textarea>
             </div>
-
-            <!-- 右侧识别预览列会通过 CSS 隐藏 -->
             <div class="space-y-2 import-preview-wrapper">
               <label class="field-label">识别预览</label>
               <div id="importPreview" class="preview-box"></div>
