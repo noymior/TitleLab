@@ -102,23 +102,24 @@
         <section class="flex-1 min-w-0 flex flex-col gap-3">
           <!-- 工具栏 -->
           <div class="panel">
-            <div class="toolbar flex items-center gap-3 flex-wrap mb-2">
-              <!-- 搜索框 + 清空 X -->
-              <div class="search-wrapper">
-                <input
-                  id="searchInput"
-                  type="text"
-                  placeholder="搜索标题关键词"
-                  class="field-input search-input"
-                />
-                <button
-                  id="btnClearSearch"
-                  type="button"
-                  class="clear-search-btn"
-                >
-                  ×
-                </button>
-              </div>
+           <div class="toolbar flex items-center gap-3 flex-wrap mb-2">
+  <!-- 搜索输入 + X 清空 -->
+  <div class="search-wrapper">
+    <input
+      id="searchInput"
+      type="text"
+      placeholder="搜索标题关键词"
+      class="field-input search-input"
+    />
+    <button
+      id="btnClearSearch"
+      type="button"
+      class="search-clear-btn"
+      aria-label="清空搜索"
+    >
+      ×
+    </button>
+  </div>
 
               <select id="filterScene" class="field-input filter-select">
                 <option value="">场景（全部）</option>
