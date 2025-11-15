@@ -95,27 +95,35 @@ function renderCategoryList() {
       'category-item' + (cat === state.currentCategory ? ' active' : '');
     li.dataset.cat = cat;
 
+    // 左侧：分类名
     const nameSpan = document.createElement('span');
-    // 在分类名称后显示数量，例如「亲子 5条」
+    nameSpan.className = 'category-name';
+    nameSpan.textContent = cat;
+
+    // 右侧：数量 + （可选的排序按钮）
+    const rightSpan = document.createElement('span');
+    rightSpan.className = 'category-right';
+
     let count = 0;
     if (cat === '全部') {
       count = state.titles.length;
     } else {
       count = state.titles.filter((t) => t.main_category === cat).length;
     }
-    nameSpan.textContent = `${cat} ${count}条`;
-    li.appendChild(nameSpan);
+    const countSpan = document.createElement('span');
+    countSpan.className = 'category-count';
+    countSpan.textContent = `${count}条`;
+    rightSpan.appendChild(countSpan);
 
     // 排序模式：给非“全部”增加 ↑↓ 按钮
     if (state.isSortingCategories && cat !== '全部') {
       const controls = document.createElement('span');
-      controls.style.marginLeft = '8px';
+      controls.className = 'category-sort-controls';
 
       const btnUp = document.createElement('button');
       btnUp.type = 'button';
       btnUp.textContent = '↑';
       btnUp.className = 'function-btn ghost text-xs btn-inline';
-      btnUp.style.paddingInline = '6px';
       btnUp.addEventListener('click', (e) => {
         e.stopPropagation();
         reorderCategory(index, -1);
@@ -126,7 +134,6 @@ function renderCategoryList() {
       btnDown.textContent = '↓';
       btnDown.className = 'function-btn ghost text-xs btn-inline';
       btnDown.style.marginLeft = '4px';
-      btnDown.style.paddingInline = '6px';
       btnDown.addEventListener('click', (e) => {
         e.stopPropagation();
         reorderCategory(index, 1);
@@ -134,7 +141,7 @@ function renderCategoryList() {
 
       controls.appendChild(btnUp);
       controls.appendChild(btnDown);
-      li.appendChild(controls);
+      rightSpan.appendChild(controls);
     }
 
     // 普通点击：切换当前分类
@@ -144,6 +151,8 @@ function renderCategoryList() {
       renderTitles();
     });
 
+    li.appendChild(nameSpan);
+    li.appendChild(rightSpan);
     list.appendChild(li);
   });
 
@@ -609,6 +618,9 @@ async function saveTitleFromModal() {
       showToast('标题已新增');
     }
 
+    // ⭐ 修改主分类后，自动切换到该分类，避免看起来“跑丢了”
+    state.currentCategory = cat || '全部';
+
     closeTitleModal();
     await loadTitlesFromCloud();
   } catch (e) {
@@ -783,7 +795,10 @@ async function saveCloudSnapshot() {
   }
 }
 
-async function loadCloudSnapshot(key) {
+// ⭐ 改成：内部不再二次弹窗，始终覆盖 Supabase.titles
+async function loadCloudSnapshot(key, options = {}) {
+  const { skipConfirm = false } = options;
+
   if (!supabase) {
     alert('未配置 Supabase');
     return;
@@ -801,14 +816,17 @@ async function loadCloudSnapshot(key) {
       return;
     }
 
-    const payload = data.payload;
-    const ok = confirm('是否同时把快照 titles 覆盖写入 Supabase.titles 表？');
-    applySnapshotPayload(payload);
-    if (ok) {
-      await syncSnapshotTitlesToCloud(payload.titles || []);
-    } else {
-      showToast('已加载快照（仅前端）');
+    if (!skipConfirm) {
+      const ok = confirm('确定使用此快照覆盖当前数据？');
+      if (!ok) return;
     }
+
+    const payload = data.payload;
+
+    // 覆盖前端 & 覆盖云端表
+    applySnapshotPayload(payload);
+    await syncSnapshotTitlesToCloud(payload.titles || []);
+    showToast('已加载快照并覆盖云端');
   } catch (e) {
     console.error('[TitleApp] loadCloudSnapshot error', e);
     alert('加载快照失败：' + (e.message || 'Unknown error'));
@@ -898,7 +916,13 @@ async function renderCloudHistoryList(anchorBtn) {
         if (!key) return;
         const ok = confirm('确定使用此快照覆盖当前数据？');
         if (!ok) return;
-        await loadCloudSnapshot(key);
+
+        // 只在这里弹一次确认，内部不再二次弹窗
+        await loadCloudSnapshot(key, { skipConfirm: true });
+
+        // 覆盖完，自动收起弹层
+        panel.classList.add('hidden');
+        panel.style.display = 'none';
       });
     });
   } catch (e) {
@@ -932,7 +956,7 @@ function bindCategoryButtons() {
   if (btnAdd) {
     btnAdd.addEventListener('click', () => {
       const name = prompt('请输入新的分类名称：', '');
-      if (!name) return;
+      if (name === null) return;
       const trimmed = name.trim();
       if (!trimmed) return;
 
