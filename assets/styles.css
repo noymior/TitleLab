@@ -223,7 +223,11 @@ textarea.field-input {
   padding: 4px 0;
 }
 
+/* 整行做成左右结构：左边分类名，右边“多少条 + 排序按钮” */
 .category-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   padding: 6px 14px;
   border-radius: 999px;
   font-size: 13px;
@@ -243,6 +247,40 @@ textarea.field-input {
   background: var(--brand-blue); /* 选中分类：#1990FF */
   color: #ffffff;
 }
+
+/* 左侧分类名：占满剩余空间，长文字省略号 */
+.category-name {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 右侧区域：包含“多少条”和可能的↑↓按钮 */
+.category-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  margin-left: 8px;
+}
+
+/* 数量文字稍微小一点，未选中时用灰色，激活时用半透明白 */
+.category-count {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.category-item.active .category-count {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* 排序按钮容器，可选 */
+.category-sort-controls .function-btn {
+  padding-inline: 6px;
+}
+
 
 /* 手机端布局 */
 
