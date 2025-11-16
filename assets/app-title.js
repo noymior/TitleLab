@@ -14,7 +14,7 @@ const ITEM_TABLE = PAGE_MODE === 'content' ? 'contents' : 'titles';
 const COUNTER_TABLE = PAGE_MODE === 'content' ? 'titles' : 'contents';
 
 const DEFAULT_CATEGORIES = ['全部', '亲子', '情侣', '闺蜜', '单人', '烟花', '夜景'];
-const CATEGORY_LS_KEY = `${PAGE_MODE}_categories_v1`;
+const CATEGORY_LS_KEY = 'title_categories_v1';
 const DISPLAY_SETTINGS_KEY = 'display_settings_v1';
 const DEFAULT_DISPLAY_SETTINGS = {
   brandColor: '#1990ff',
