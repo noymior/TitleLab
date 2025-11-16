@@ -449,6 +449,7 @@ function renderTitles() {
 // =============== 5. 标题操作：复制 / 删除 ===============
 
 async function copyTitle(item) {
+  // 1. 先复制到剪贴板
   try {
     await navigator.clipboard.writeText(item.text || '');
     showToast('已复制');
@@ -457,14 +458,26 @@ async function copyTitle(item) {
     showToast('复制失败', 'error');
   }
 
+  // 2. 没有云端或没有 id，就不记 usage_count 了
   if (!supabase || !item.id) return;
 
+  // 3. 只更新这一条记录的 usage_count，本地顺序不动
   try {
+    const newCount = (item.usage_count || 0) + 1;
+
     await supabase
       .from('titles')
-      .update({ usage_count: (item.usage_count || 0) + 1 })
+      .update({ usage_count: newCount })
       .eq('id', item.id);
-    await loadTitlesFromCloud();
+
+    // 本地 state.titles 也同步一下 usage_count，但不重新排序
+    const idx = state.titles.findIndex((t) => t.id === item.id);
+    if (idx !== -1) {
+      state.titles[idx] = {
+        ...state.titles[idx],
+        usage_count: newCount
+      };
+    }
   } catch (e) {
     console.error('[TitleApp] 更新 usage_count 失败', e);
   }
@@ -565,7 +578,7 @@ async function saveTitleFromModal() {
   const fieldType = document.getElementById('fieldContentType');
   const fieldScene = document.getElementById('fieldSceneTags');
 
-  if (!fieldText) return;
+  if (!fieldText || !fieldCat || !fieldType || !fieldScene) return;
 
   const text = fieldText.value.trim();
   const cat = fieldCat.value || null;
@@ -577,6 +590,7 @@ async function saveTitleFromModal() {
     return;
   }
 
+  // 场景标签拆分
   const sceneTags = sceneRaw
     ? sceneRaw
         .split(/[，,、]/)
@@ -603,26 +617,62 @@ async function saveTitleFromModal() {
     return;
   }
 
+  // 记录当前所在的分类，用来保持筛选不变（包括“全部”）
+  const prevCategory = state.currentCategory;
+
   try {
     if (state.editingId) {
+      // ====== 情况一：编辑已有标题 ======
+
       const { error } = await supabase
         .from('titles')
         .update(payload)
         .eq('id', state.editingId);
+
       if (error) throw error;
+
+      // 本地 state.titles 里就地更新，不改变原来的 index 顺序
+      const idx = state.titles.findIndex((t) => t.id === state.editingId);
+      if (idx !== -1) {
+        state.titles[idx] = {
+          ...state.titles[idx],
+          ...payload
+        };
+      }
+
       showToast('标题已更新');
     } else {
-      payload.usage_count = 0;
-      const { error } = await supabase.from('titles').insert([payload]);
+      // ====== 情况二：新增标题 ======
+
+      const insertPayload = {
+        ...payload,
+        usage_count: 0
+      };
+
+      // 要回写新插入的那条记录，所以加上 .select().single()
+      const { data, error } = await supabase
+        .from('titles')
+        .insert([insertPayload])
+        .select()
+        .single();
+
       if (error) throw error;
+
+      // 新增的直接加到数组末尾，顺序就是“最新一条在最后”
+      if (data) {
+        state.titles.push(data);
+      }
+
       showToast('标题已新增');
     }
 
-    // ⭐ 修改主分类后，自动切换到该分类，避免看起来“跑丢了”
-    state.currentCategory = cat || '全部';
+    // 保持原来的筛选分类，不自动切到其他分类
+    state.currentCategory = prevCategory;
 
+    // 分类数量重新计算
+    renderCategoryList();
+    renderTitles();
     closeTitleModal();
-    await loadTitlesFromCloud();
   } catch (e) {
     console.error('[TitleApp] 保存标题失败', e);
     showToast('保存失败：' + (e.message || ''), 'error');
@@ -795,7 +845,7 @@ async function saveCloudSnapshot() {
   }
 }
 
-// ⭐ 改成：内部不再二次弹窗，始终覆盖 Supabase.titles
+// 内部不再二次弹窗，始终覆盖 Supabase.titles
 async function loadCloudSnapshot(key, options = {}) {
   const { skipConfirm = false } = options;
 
@@ -833,7 +883,7 @@ async function loadCloudSnapshot(key, options = {}) {
   }
 }
 
-// ⭐ 只显示最近 5 条快照 + 手机端不遮挡
+// 手机端不遮挡 + 只显示最近 5 条快照
 async function renderCloudHistoryList(anchorBtn) {
   if (!supabase) {
     alert('未配置 Supabase');
@@ -880,7 +930,7 @@ async function renderCloudHistoryList(anchorBtn) {
       .select('key, payload, updated_at')
       .neq('key', SNAPSHOT_DEFAULT_KEY)
       .order('updated_at', { ascending: false })
-      .limit(5); // ✅ 只要 5 条
+      .limit(5); // 只要 5 条
 
     if (error) throw error;
 
