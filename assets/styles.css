@@ -1,11 +1,16 @@
 :root {
   --brand-blue: #1990ff;
   --brand-blue-hover: #1477dd;
+  --ghost-bg: #eef2ff;
+  --ghost-hover: #e2e8ff;
   --page-bg: #f5f7fb;
   --panel-bg: #ffffff;
   --panel-border: #e5e7eb;
   --text-main: #111827;
   --text-muted: #6b7280;
+  --table-stripe: #f9fafb;
+  --list-hover: #eef2ff;
+  --topbar-title-color: #1990ff;
 }
 
 /* 基础 */
@@ -67,7 +72,7 @@ body.bg-page {
 .topbar-title {
   font-size: 15px;
   font-weight: 600;
-  color: var(--brand-blue);
+  color: var(--topbar-title-color, var(--brand-blue));
 }
 
 .pill-muted {
@@ -145,13 +150,13 @@ body.bg-page {
 /* 灰色按钮：统一 #EEF2FF */
 
 .function-btn.ghost {
-  background: #eef2ff;
+  background: var(--ghost-bg, #eef2ff);
   color: var(--text-main);
   box-shadow: none;
 }
 
 .function-btn.ghost:hover {
-  background: #e2e8ff;
+  background: var(--ghost-hover, #e2e8ff);
   box-shadow: none;
 }
 
@@ -240,7 +245,7 @@ textarea.field-input {
 }
 
 .category-item:hover {
-  background: #eef2ff;
+  background: var(--list-hover, #eef2ff);
 }
 
 .category-item.active {
@@ -319,7 +324,7 @@ textarea.field-input {
 }
 
 .basic-table tbody tr:nth-child(2n) {
-  background: #f9fafb;
+  background: var(--table-stripe, #f9fafb);
 }
 
 /* 操作按钮区域：水平排列 */
