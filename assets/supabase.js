@@ -10,12 +10,9 @@ const SUPABASE_ANON_KEY =
 // 如果页面上预先挂了 window.TITLE_SUPABASE_URL / window.TITLE_SUPABASE_KEY
 // 或 window.CONTENT_SUPABASE_URL / window.CONTENT_SUPABASE_KEY，将优先使用；
 // 否则退回到上面的默认项目。
-const SUPABASE_PAGE_MODE = window.location.pathname.includes('content')
-  ? 'content'
-  : 'title';
-
+const PAGE_MODE = window.location.pathname.includes('content') ? 'content' : 'title';
 const pageConfig = (() => {
-  if (SUPABASE_PAGE_MODE === 'content') {
+  if (PAGE_MODE === 'content') {
     return {
       url: window.CONTENT_SUPABASE_URL || SUPABASE_URL,
       key: window.CONTENT_SUPABASE_KEY || SUPABASE_ANON_KEY,

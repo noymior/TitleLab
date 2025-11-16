@@ -15,9 +15,8 @@ const ITEM_TABLE = PAGE_MODE === 'content' ? 'contents' : 'titles';
 const COUNTER_TABLE = PAGE_MODE === 'content' ? 'titles' : 'contents';
 
 const DEFAULT_CATEGORIES = ['全部', '亲子', '情侣', '闺蜜', '单人', '烟花', '夜景'];
-const CATEGORY_LS_KEY = `${PAGE_MODE}_categories_v1`;
+const CATEGORY_LS_KEY = 'title_categories_v1';
 const DISPLAY_SETTINGS_KEY = 'display_settings_v1';
-const CLOUD_VERSION_KEY = 'cloud_snapshot_version';
 const DEFAULT_DISPLAY_SETTINGS = {
   brandColor: '#1990ff',
   brandHover: '#1477dd',
@@ -87,12 +86,6 @@ function applyDisplaySettings() {
   renderSceneFilterOptions(settings);
 }
 
-function persistDisplaySettings(settings) {
-  if (!settings) return;
-  const merged = { ...DEFAULT_DISPLAY_SETTINGS, ...settings };
-  localStorage.setItem(DISPLAY_SETTINGS_KEY, JSON.stringify(merged));
-}
-
 function renderSceneFilterOptions(settings) {
   const filterScene = document.getElementById('filterScene');
   if (!filterScene) return;
@@ -110,53 +103,6 @@ function renderSceneFilterOptions(settings) {
   } else {
     filterScene.value = '';
     state.filters.scene = '';
-  }
-}
-
-function persistSnapshotCategories(payload) {
-  if (!payload) return;
-  if (Array.isArray(payload.titleCategories)) {
-    localStorage.setItem('title_categories_v1', JSON.stringify(payload.titleCategories));
-  }
-  if (Array.isArray(payload.contentCategories)) {
-    localStorage.setItem(
-      'content_categories_v1',
-      JSON.stringify(payload.contentCategories)
-    );
-  }
-}
-
-async function bootstrapCloudState() {
-  if (!supabase) {
-    console.warn('[TitleApp] supabaseClient 不存在，跳过快照加载');
-    await loadTitlesFromCloud();
-    return;
-  }
-
-  try {
-    const defaultSnapshot = await fetchSnapshotByKey(SNAPSHOT_DEFAULT_KEY);
-
-    if (defaultSnapshot?.payload) {
-      state.cloudVersion = defaultSnapshot.payload.version || 0;
-      localStorage.setItem(CLOUD_VERSION_KEY, String(state.cloudVersion));
-
-      if (defaultSnapshot.payload.displaySettings) {
-        persistDisplaySettings(defaultSnapshot.payload.displaySettings);
-        applyDisplaySettings();
-      }
-
-      persistSnapshotCategories(defaultSnapshot.payload);
-      applySnapshotPayload(defaultSnapshot.payload);
-      await syncSnapshotTables(defaultSnapshot.payload);
-      showToast('已加载云端快照');
-      return;
-    }
-
-    await loadTitlesFromCloud();
-  } catch (e) {
-    console.error('[TitleApp] bootstrapCloudState error', e);
-    showToast('加载云端失败，已切换本地列表', 'error');
-    await loadTitlesFromCloud();
   }
 }
 
