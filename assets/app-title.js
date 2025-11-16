@@ -9,6 +9,18 @@ const supabase = window.supabaseClient || null;
 
 const DEFAULT_CATEGORIES = ['全部', '亲子', '情侣', '闺蜜', '单人', '烟花', '夜景'];
 const CATEGORY_LS_KEY = 'title_categories_v1';
+const DISPLAY_SETTINGS_KEY = 'display_settings_v1';
+const DEFAULT_DISPLAY_SETTINGS = {
+  brandColor: '#1990ff',
+  brandHover: '#1477dd',
+  ghostColor: '#eef2ff',
+  ghostHover: '#e2e8ff',
+  stripeColor: '#f9fafb',
+  hoverColor: '#eef2ff',
+  scenes: ['港迪城堡', '烟花', '夜景', '香港街拍'],
+  titleText: '标题与文案管理系统',
+  titleColor: '#1990ff'
+};
 
 const SNAPSHOT_TABLE = 'title_snapshots';
 const SNAPSHOT_DEFAULT_KEY = 'default'; // 占位快照 key（不在列表里显示）
@@ -28,10 +40,70 @@ const state = {
 
 let toastTimer = null;
 
+function getDisplaySettings() {
+  const raw = localStorage.getItem(DISPLAY_SETTINGS_KEY);
+  if (!raw) return { ...DEFAULT_DISPLAY_SETTINGS };
+  try {
+    const parsed = JSON.parse(raw);
+    const scenes = Array.isArray(parsed.scenes) ? parsed.scenes : [];
+    return {
+      ...DEFAULT_DISPLAY_SETTINGS,
+      ...parsed,
+      scenes: scenes.length ? scenes : [...DEFAULT_DISPLAY_SETTINGS.scenes]
+    };
+  } catch (e) {
+    console.error('[TitleApp] 解析显示设置失败', e);
+    return { ...DEFAULT_DISPLAY_SETTINGS };
+  }
+}
+
+function applyDisplaySettings() {
+  const settings = getDisplaySettings();
+  const root = document.documentElement;
+  root.style.setProperty('--brand-blue', settings.brandColor);
+  root.style.setProperty('--brand-blue-hover', settings.brandHover);
+  root.style.setProperty('--ghost-bg', settings.ghostColor);
+  root.style.setProperty('--ghost-hover', settings.ghostHover);
+  root.style.setProperty('--table-stripe', settings.stripeColor);
+  root.style.setProperty('--list-hover', settings.hoverColor);
+  root.style.setProperty('--topbar-title-color', settings.titleColor);
+
+  const topbarTitle = document.querySelector('.topbar-title');
+  if (topbarTitle) {
+    topbarTitle.textContent = settings.titleText ||
+      DEFAULT_DISPLAY_SETTINGS.titleText;
+    topbarTitle.style.color = settings.titleColor;
+  }
+
+  renderSceneFilterOptions(settings);
+}
+
+function renderSceneFilterOptions(settings) {
+  const filterScene = document.getElementById('filterScene');
+  if (!filterScene) return;
+  const prevValue = filterScene.value;
+  filterScene.innerHTML = '<option value="">场景（全部）</option>';
+  (settings.scenes || []).forEach((scene) => {
+    const opt = document.createElement('option');
+    opt.value = scene;
+    opt.textContent = scene;
+    filterScene.appendChild(opt);
+  });
+
+  if (settings.scenes.includes(prevValue)) {
+    filterScene.value = prevValue;
+  } else {
+    filterScene.value = '';
+    state.filters.scene = '';
+  }
+}
+
 // =============== 1. 初始化入口 ===============
 
 document.addEventListener('DOMContentLoaded', () => {
   console.log('[TitleApp] DOMContentLoaded: init');
+
+  applyDisplaySettings();
 
   // 分类
   loadCategoriesFromLocal();
@@ -1072,13 +1144,13 @@ function bindGlobalNavButtons() {
 
   if (btnSettings) {
     btnSettings.addEventListener('click', () => {
-      alert('设置页面（占位），后续可跳转到 settings.html');
+      window.location.href = 'settings.html';
     });
   }
 
   if (btnManage) {
     btnManage.addEventListener('click', () => {
-      window.location.href = 'index.html';
+      window.location.href = 'admin-center.html';
     });
   }
 }
