@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <title>管理中心</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="assets/styles.css" />
+  </head>
+  <body class="bg-page">
+    <div class="wrap">
+      <header class="topbar mb-4">
+        <div class="topbar-left">
+          <div class="logo-dot"></div>
+          <div class="ml-2">
+            <div class="text-sm font-semibold">管理中心</div>
+            <div class="text-xs text-gray-500">标题与文案系统 · 后台</div>
+          </div>
+        </div>
+        <button
+          class="function-btn ghost text-xs"
+          onclick="window.location.href='title.html'"
+        >
+          ← 返回标题页
+        </button>
+      </header>
+
+      <main class="layout flex-col gap-3">
+        <section class="panel">
+          <h2 class="text-base font-semibold mb-3">功能入口</h2>
+          <div class="grid gap-3 md:grid-cols-3">
+            <div class="panel">
+              <div class="text-lg mb-1">审核管理 ✅</div>
+              <p class="text-xs text-gray-500">
+                预留：审核新标题/新文案，支持通过、驳回、备注说明。
+              </p>
+            </div>
+            <div class="panel">
+              <div class="text-lg mb-1">👥 用户管理</div>
+              <p class="text-xs text-gray-500">
+                预留：查看用户列表、禁用账号、重置权限。
+              </p>
+            </div>
+            <div class="panel">
+              <div class="text-lg mb-1">🔐 权限管理</div>
+              <p class="text-xs text-gray-500">
+                预留：配置角色（管理员/编辑/访客），控制读写范围。
+              </p>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>
