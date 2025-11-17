@@ -42,15 +42,10 @@
           </div>
         </div>
 
-        <!-- 中：标题 / 文案 Tab -->
+        <!-- 中：标题 / 文案 Tab（同页切换，避免跨页跳转） -->
         <div class="topbar-center">
-          <button class="nav-tab nav-tab-active">标题</button>
-          <button
-            class="nav-tab"
-            onclick="window.location.href='content.html'"
-          >
-            文案
-          </button>
+          <button class="nav-tab nav-tab-active" data-target="title">标题</button>
+          <button class="nav-tab" data-target="content">文案</button>
         </div>
 
         <!-- 右：Supabase 状态 -->
@@ -61,7 +56,7 @@
         </div>
       </header>
 
-      <main class="layout">
+      <main id="titleSection" class="layout">
         <!-- 左侧分类面板 -->
         <aside class="panel w-full md:w-64 md:flex-shrink-0">
           <!-- 按钮行：新增 / 删除 / 排序 -->
@@ -188,6 +183,53 @@
         </section>
       </main>
 
+      <!-- 文案管理区域（与标题同页 tab 切换） -->
+      <main id="contentSection" class="layout hidden">
+        <aside class="sidebar panel">
+          <div class="sidebar-header">
+            <h2 class="panel-title">分类</h2>
+            <button class="function-btn ghost text-xs">新增分类</button>
+          </div>
+          <ul id="contentCategoryList" class="category-list"></ul>
+        </aside>
+
+        <section class="panel content-area">
+          <div class="toolbar">
+            <div class="toolbar-left">
+              <input
+                type="search"
+                class="input"
+                placeholder="搜索文案 / 标题"
+              />
+            </div>
+            <div class="toolbar-center">
+              <!-- 未来：语气、平台、场景等筛选 -->
+            </div>
+            <div class="toolbar-right">
+              <button class="function-btn primary">新增文案</button>
+            </div>
+          </div>
+
+          <div class="table-wrap desktop-only">
+            <table class="data-table zebra">
+              <thead>
+                <tr>
+                  <th class="w-10">#</th>
+                  <th class="w-40">文案标题</th>
+                  <th>正文摘要</th>
+                  <th class="w-28">主分类</th>
+                  <th class="w-28">内容类型</th>
+                  <th class="w-32">操作</th>
+                </tr>
+              </thead>
+              <tbody id="contentTableBody"></tbody>
+            </table>
+          </div>
+
+          <div id="contentMobileList" class="mobile-only space-y-3"></div>
+        </section>
+      </main>
+
       <!-- 云端快照弹出层 -->
       <div id="cloudHistoryPanel" class="cloud-history-panel hidden"></div>
 
@@ -290,5 +332,29 @@
       <!-- Toast -->
       <div id="toast" class="toast hidden"></div>
     </div>
+
+    <!-- 站内 tab 切换：无跳转在同页展示标题与文案 -->
+    <script>
+      const tabButtons = document.querySelectorAll('.nav-tab');
+      const sections = {
+        title: document.getElementById('titleSection'),
+        content: document.getElementById('contentSection'),
+      };
+
+      function switchTab(target) {
+        tabButtons.forEach((btn) => {
+          const isActive = btn.dataset.target === target;
+          btn.classList.toggle('nav-tab-active', isActive);
+        });
+
+        Object.entries(sections).forEach(([key, el]) => {
+          el.classList.toggle('hidden', key !== target);
+        });
+      }
+
+      tabButtons.forEach((btn) => {
+        btn.addEventListener('click', () => switchTab(btn.dataset.target));
+      });
+    </script>
   </body>
 </html>
