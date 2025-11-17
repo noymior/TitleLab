@@ -42,15 +42,10 @@
           </div>
         </div>
 
-        <!-- 中：标题 / 文案 Tab -->
+        <!-- 中：标题 / 文案 Tab（同页切换，避免跨页跳转） -->
         <div class="topbar-center">
-          <button class="nav-tab nav-tab-active">标题</button>
-          <button
-            class="nav-tab"
-            onclick="window.location.href='content.html'"
-          >
-            文案
-          </button>
+          <button class="nav-tab nav-tab-active" data-target="title">标题</button>
+          <button class="nav-tab" data-target="content">文案</button>
         </div>
 
         <!-- 右：Supabase 状态 -->
@@ -61,7 +56,7 @@
         </div>
       </header>
 
-      <main class="layout">
+      <main id="titleSection" class="layout">
         <!-- 左侧分类面板 -->
         <aside class="panel w-full md:w-64 md:flex-shrink-0">
           <!-- 按钮行：新增 / 删除 / 排序 -->
@@ -188,6 +183,122 @@
         </section>
       </main>
 
+      <!-- 文案管理区域（与标题同页 tab 切换，与标题区保持一致的布局/功能骨架） -->
+      <main id="contentSection" class="layout hidden">
+        <aside class="panel w-full md:w-64 md:flex-shrink-0">
+          <div class="flex items-center justify-end mb-3">
+            <div class="flex gap-2">
+              <button id="btnAddContentCategory" class="function-btn ghost text-xs">
+                新增分类
+              </button>
+              <button
+                id="btnDeleteContentCategory"
+                class="function-btn ghost text-xs"
+              >
+                删除分类
+              </button>
+              <button id="btnSortContentCategory" class="function-btn ghost text-xs">
+                排序
+              </button>
+            </div>
+          </div>
+
+          <div id="mobileContentCategoryWrapper" class="md:hidden mb-2">
+            <button
+              id="mobileContentCategoryToggle"
+              type="button"
+              class="function-btn ghost w-full flex items-center justify-between"
+            >
+              <span id="mobileContentCategoryLabel">全部</span>
+              <span class="text-xs text-gray-600">分类 ▾</span>
+            </button>
+          </div>
+
+          <ul id="contentCategoryList" class="category-list"></ul>
+        </aside>
+
+        <section class="flex-1 min-w-0 flex flex-col gap-3">
+          <div class="panel">
+            <div class="toolbar flex items-center gap-3 flex-wrap mb-2">
+              <div class="search-wrapper">
+                <input
+                  id="contentSearchInput"
+                  type="text"
+                  placeholder="搜索文案 / 标题"
+                  class="field-input search-input"
+                />
+                <button
+                  id="btnClearContentSearch"
+                  type="button"
+                  class="function-btn search-clear-btn text-xs"
+                >
+                  清除
+                </button>
+              </div>
+
+              <select id="contentFilterScene" class="field-input filter-select">
+                <option value="">场景（全部）</option>
+                <option value="港迪城堡">港迪城堡</option>
+                <option value="烟花">烟花</option>
+                <option value="夜景">夜景</option>
+                <option value="香港街拍">香港街拍</option>
+              </select>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2 mt-1">
+              <button
+                id="btnNewContent"
+                class="function-btn"
+                type="button"
+              >
+                新增文案
+              </button>
+              <button
+                id="btnBatchImportContent"
+                class="function-btn ghost"
+                type="button"
+              >
+                批量导入
+              </button>
+
+              <div class="extra-actions flex flex-wrap items-center gap-2 ml-auto">
+                <button id="btnClearContent" class="function-btn ghost">清空全部</button>
+                <button id="btnContentSettings" class="function-btn ghost">
+                  设置页面
+                </button>
+                <button id="btnSaveContentCloud" class="function-btn ghost">
+                  保存云端
+                </button>
+                <button id="btnLoadContentCloud" class="function-btn ghost">
+                  加载云端
+                </button>
+                <button id="btnManageContentPage" class="function-btn ghost">
+                  管理页面
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel hidden md:block">
+            <table class="basic-table w-full">
+              <thead>
+                <tr>
+                  <th class="w-12">#</th>
+                  <th class="text-left">文案标题</th>
+                  <th class="w-28 text-left">主分类</th>
+                  <th class="w-28 text-left">内容类型</th>
+                  <th class="text-left">正文摘要</th>
+                  <th class="w-40 text-center">操作</th>
+                </tr>
+              </thead>
+              <tbody id="contentTableBody"></tbody>
+            </table>
+          </div>
+
+          <div id="contentMobileList" class="md:hidden flex flex-col gap-2"></div>
+        </section>
+      </main>
+
       <!-- 云端快照弹出层 -->
       <div id="cloudHistoryPanel" class="cloud-history-panel hidden"></div>
 
@@ -287,8 +398,624 @@
         </div>
       </div>
 
+      <!-- 文案弹窗 -->
+      <div id="contentModal" class="modal-backdrop hidden">
+        <div class="modal">
+          <div class="modal-header">
+            <div id="contentModalTitle" class="modal-title">新增文案</div>
+            <button id="btnCloseContentModal" class="icon-btn" aria-label="关闭">
+              ×
+            </button>
+          </div>
+
+          <div class="modal-body space-y-3">
+            <div>
+              <label class="field-label">文案标题</label>
+              <input
+                id="contentTitleField"
+                type="text"
+                class="field-input"
+                placeholder="请输入文案标题"
+              />
+            </div>
+
+            <div class="flex flex-wrap gap-3">
+              <div class="flex-1 min-w-[120px]">
+                <label class="field-label">主分类</label>
+                <select id="contentMainCategory" class="field-input"></select>
+              </div>
+
+              <div class="flex-1 min-w-[120px]">
+                <label class="field-label">内容类型</label>
+                <select id="contentTypeField" class="field-input">
+                  <option value="">自动识别</option>
+                  <option value="展示">出片展示</option>
+                  <option value="攻略">攻略 / 机位</option>
+                  <option value="服务">服务推荐</option>
+                  <option value="节日">节日主题</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label class="field-label">正文内容</label>
+              <textarea
+                id="contentBodyField"
+                class="field-input"
+                rows="4"
+                placeholder="请输入文案正文"
+              ></textarea>
+            </div>
+
+            <div>
+              <label class="field-label">场景标签（可选，多项用逗号分隔）</label>
+              <input
+                id="contentSceneTags"
+                type="text"
+                class="field-input"
+                placeholder="例如：港迪城堡, 烟花, 夜景"
+              />
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button id="btnCancelContentModal" class="function-btn ghost">
+              取消
+            </button>
+            <button id="btnSaveContent" class="function-btn">保存</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 文案批量导入弹窗 -->
+      <div id="contentImportModal" class="modal-backdrop hidden">
+        <div class="modal modal-lg">
+          <div class="modal-header">
+            <div class="modal-title">批量导入文案</div>
+            <button id="btnCloseContentImport" class="icon-btn" aria-label="关闭">
+              ×
+            </button>
+          </div>
+
+          <div class="modal-body grid gap-3 md:grid-cols-2">
+            <div class="space-y-2">
+              <label class="field-label">多行文案（每行一条）</label>
+              <textarea
+                id="contentImportRaw"
+                class="field-input"
+                rows="12"
+                placeholder="粘贴多条文案，格式：标题｜正文｜主分类｜内容类型"
+              ></textarea>
+            </div>
+            <div class="space-y-2 import-preview-wrapper">
+              <label class="field-label">识别预览</label>
+              <div id="contentImportPreview" class="preview-box"></div>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button id="btnCancelContentImport" class="function-btn ghost">
+              取消
+            </button>
+            <button id="btnRunContentImport" class="function-btn">
+              识别并导入
+            </button>
+          </div>
+        </div>
+      </div>
+
       <!-- Toast -->
       <div id="toast" class="toast hidden"></div>
     </div>
+
+    <!-- 站内 tab 切换：无跳转在同页展示标题与文案 -->
+    <script>
+      const tabButtons = document.querySelectorAll('.nav-tab');
+      const sections = {
+        title: document.getElementById('titleSection'),
+        content: document.getElementById('contentSection'),
+      };
+
+      function switchTab(target) {
+        tabButtons.forEach((btn) => {
+          const isActive = btn.dataset.target === target;
+          btn.classList.toggle('nav-tab-active', isActive);
+        });
+
+        Object.entries(sections).forEach(([key, el]) => {
+          el.classList.toggle('hidden', key !== target);
+        });
+      }
+
+      tabButtons.forEach((btn) => {
+        btn.addEventListener('click', () => switchTab(btn.dataset.target));
+      });
+
+      // 文案页：复刻标题页的交互骨架（分类/搜索/表格/移动列表/弹窗）
+      const contentDefaults = {
+        categories: ['全部', '亲子', '情侣', '闺蜜', '单人', '烟花', '夜景'],
+        items: [
+          {
+            id: 'c-1',
+            title: '城堡夜景攻略',
+            body: '带你玩转港迪城堡夜景拍摄要点，包含构图与人像姿势。',
+            mainCategory: '夜景',
+            contentType: '攻略',
+            scenes: ['港迪城堡', '夜景'],
+          },
+          {
+            id: 'c-2',
+            title: '闺蜜烟花文案',
+            body: '拉上姐妹一起看烟花，记录最亮的笑容与最温柔的夜色。',
+            mainCategory: '闺蜜',
+            contentType: '展示',
+            scenes: ['烟花'],
+          },
+          {
+            id: 'c-3',
+            title: '亲子一日游',
+            body: '适合小朋友的轻松路线，解锁乐园里的暖心亲子时刻。',
+            mainCategory: '亲子',
+            contentType: '服务',
+            scenes: ['港迪城堡'],
+          },
+        ],
+      };
+
+      const contentState = {
+        categories: [...contentDefaults.categories],
+        items: [...contentDefaults.items],
+        currentCategory: '全部',
+        filters: { search: '', scene: '' },
+        editingId: null,
+        isSorting: false,
+      };
+
+      function renderContentCategories() {
+        const list = document.getElementById('contentCategoryList');
+        const mobileLabel = document.getElementById('mobileContentCategoryLabel');
+        if (!list) return;
+
+        list.innerHTML = '';
+        contentState.categories.forEach((cat, idx) => {
+          const li = document.createElement('li');
+          li.className =
+            'category-item' + (cat === contentState.currentCategory ? ' active' : '');
+          li.dataset.cat = cat;
+
+          const nameSpan = document.createElement('span');
+          nameSpan.className = 'category-name';
+          nameSpan.textContent = cat;
+
+          const rightSpan = document.createElement('span');
+          rightSpan.className = 'category-right';
+          const count =
+            cat === '全部'
+              ? contentState.items.length
+              : contentState.items.filter((item) => item.mainCategory === cat).length;
+          const countSpan = document.createElement('span');
+          countSpan.className = 'category-count';
+          countSpan.textContent = `${count}条`;
+          rightSpan.appendChild(countSpan);
+
+          if (contentState.isSorting && cat !== '全部') {
+            const controls = document.createElement('span');
+            controls.className = 'category-sort-controls';
+
+            const btnUp = document.createElement('button');
+            btnUp.type = 'button';
+            btnUp.textContent = '↑';
+            btnUp.className = 'function-btn ghost text-xs btn-inline';
+            btnUp.addEventListener('click', (e) => {
+              e.stopPropagation();
+              moveContentCategory(idx, -1);
+            });
+
+            const btnDown = document.createElement('button');
+            btnDown.type = 'button';
+            btnDown.textContent = '↓';
+            btnDown.className = 'function-btn ghost text-xs btn-inline';
+            btnDown.addEventListener('click', (e) => {
+              e.stopPropagation();
+              moveContentCategory(idx, 1);
+            });
+
+            controls.appendChild(btnUp);
+            controls.appendChild(btnDown);
+            rightSpan.appendChild(controls);
+          }
+
+          li.appendChild(nameSpan);
+          li.appendChild(rightSpan);
+          li.addEventListener('click', () => {
+            contentState.currentCategory = cat;
+            renderContentCategories();
+            renderContentLists();
+            if (mobileLabel) mobileLabel.textContent = cat;
+          });
+
+          list.appendChild(li);
+        });
+      }
+
+      function moveContentCategory(index, delta) {
+        const target = index + delta;
+        if (target < 1 || target >= contentState.categories.length) return; // 保留“全部”在首位
+        const arr = [...contentState.categories];
+        const tmp = arr[index];
+        arr[index] = arr[target];
+        arr[target] = tmp;
+        contentState.categories = arr;
+        renderContentCategories();
+      }
+
+      function filterContentItems() {
+        const { search, scene } = contentState.filters;
+        return contentState.items.filter((item) => {
+          const matchCategory =
+            contentState.currentCategory === '全部' ||
+            item.mainCategory === contentState.currentCategory;
+          const matchSearch =
+            !search ||
+            item.title.toLowerCase().includes(search.toLowerCase()) ||
+            item.body.toLowerCase().includes(search.toLowerCase());
+          const matchScene =
+            !scene || (item.scenes && item.scenes.some((s) => s === scene));
+          return matchCategory && matchSearch && matchScene;
+        });
+      }
+
+      function renderContentLists() {
+        renderContentTable();
+        renderContentMobile();
+      }
+
+      function renderContentTable() {
+        const tbody = document.getElementById('contentTableBody');
+        if (!tbody) return;
+        const items = filterContentItems();
+        tbody.innerHTML = '';
+
+        items.forEach((item, idx) => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td class="text-center text-gray-500">${idx + 1}</td>
+            <td class="font-medium">${item.title}</td>
+            <td>${item.mainCategory || '-'}</td>
+            <td>${item.contentType || '-'}</td>
+            <td class="text-gray-600">${item.body.slice(0, 36)}${
+            item.body.length > 36 ? '…' : ''
+          }</td>
+            <td class="text-center">
+              <div class="flex justify-center gap-2">
+                <button class="function-btn ghost text-xs" data-id="${item.id}" data-act="edit">编辑</button>
+                <button class="function-btn ghost text-xs" data-id="${item.id}" data-act="delete">删除</button>
+              </div>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+
+        tbody.querySelectorAll('button[data-act="edit"]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const item = contentState.items.find((i) => i.id === btn.dataset.id);
+            openContentModal(item);
+          });
+        });
+
+        tbody.querySelectorAll('button[data-act="delete"]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            contentState.items = contentState.items.filter((i) => i.id !== btn.dataset.id);
+            renderContentLists();
+            renderContentCategories();
+          });
+        });
+      }
+
+      function renderContentMobile() {
+        const wrap = document.getElementById('contentMobileList');
+        if (!wrap) return;
+        const items = filterContentItems();
+        wrap.innerHTML = '';
+
+        items.forEach((item) => {
+          const card = document.createElement('div');
+          card.className = 'mobile-card';
+          card.innerHTML = `
+            <div class="mobile-card-header">
+              <div>
+                <div class="mobile-card-title">${item.title}</div>
+                <div class="mobile-card-sub">${item.mainCategory || '-'} · ${
+            item.contentType || '-'
+          }</div>
+              </div>
+              <div class="pill-muted text-xs">${(item.scenes || []).join(' / ') || '无场景'}</div>
+            </div>
+            <div class="mobile-card-body text-sm text-gray-700 leading-relaxed">
+              ${item.body}
+            </div>
+            <div class="mobile-card-actions">
+              <button class="function-btn ghost text-xs" data-id="${item.id}" data-act="edit">编辑</button>
+              <button class="function-btn ghost text-xs" data-id="${item.id}" data-act="delete">删除</button>
+            </div>
+          `;
+          wrap.appendChild(card);
+        });
+
+        wrap.querySelectorAll('button[data-act="edit"]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const item = contentState.items.find((i) => i.id === btn.dataset.id);
+            openContentModal(item);
+          });
+        });
+
+        wrap.querySelectorAll('button[data-act="delete"]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            contentState.items = contentState.items.filter((i) => i.id !== btn.dataset.id);
+            renderContentLists();
+            renderContentCategories();
+          });
+        });
+      }
+
+      function setupContentFilters() {
+        const searchInput = document.getElementById('contentSearchInput');
+        const clearBtn = document.getElementById('btnClearContentSearch');
+        const sceneSelect = document.getElementById('contentFilterScene');
+
+        if (searchInput) {
+          searchInput.addEventListener('input', (e) => {
+            contentState.filters.search = e.target.value.trim();
+            renderContentLists();
+          });
+        }
+
+        if (clearBtn) {
+          clearBtn.addEventListener('click', () => {
+            contentState.filters.search = '';
+            searchInput.value = '';
+            renderContentLists();
+          });
+        }
+
+        if (sceneSelect) {
+          sceneSelect.addEventListener('change', (e) => {
+            contentState.filters.scene = e.target.value;
+            renderContentLists();
+          });
+        }
+      }
+
+      function setupContentCategories() {
+        const addBtn = document.getElementById('btnAddContentCategory');
+        const delBtn = document.getElementById('btnDeleteContentCategory');
+        const sortBtn = document.getElementById('btnSortContentCategory');
+        const mobileToggle = document.getElementById('mobileContentCategoryToggle');
+        const list = document.getElementById('contentCategoryList');
+
+        if (addBtn) {
+          addBtn.addEventListener('click', () => {
+            const name = prompt('请输入新分类名称');
+            if (!name) return;
+            if (contentState.categories.includes(name)) return alert('分类已存在');
+            contentState.categories.push(name);
+            renderContentCategories();
+            renderContentLists();
+          });
+        }
+
+        if (delBtn) {
+          delBtn.addEventListener('click', () => {
+            if (contentState.currentCategory === '全部') return alert('请选择需要删除的分类');
+            contentState.categories = contentState.categories.filter(
+              (c) => c !== contentState.currentCategory
+            );
+            contentState.items = contentState.items.filter(
+              (item) => item.mainCategory !== contentState.currentCategory
+            );
+            contentState.currentCategory = '全部';
+            renderContentCategories();
+            renderContentLists();
+          });
+        }
+
+        if (sortBtn) {
+          sortBtn.addEventListener('click', () => {
+            contentState.isSorting = !contentState.isSorting;
+            sortBtn.textContent = contentState.isSorting ? '完成排序' : '排序';
+            renderContentCategories();
+          });
+        }
+
+        if (mobileToggle && list) {
+          mobileToggle.addEventListener('click', () => {
+            list.classList.toggle('hidden');
+          });
+        }
+      }
+
+      function openContentModal(item) {
+        const modal = document.getElementById('contentModal');
+        const titleEl = document.getElementById('contentModalTitle');
+        const nameField = document.getElementById('contentTitleField');
+        const bodyField = document.getElementById('contentBodyField');
+        const mainCategory = document.getElementById('contentMainCategory');
+        const typeField = document.getElementById('contentTypeField');
+        const sceneField = document.getElementById('contentSceneTags');
+
+        if (!modal) return;
+        contentState.editingId = item ? item.id : null;
+        titleEl.textContent = item ? '编辑文案' : '新增文案';
+        nameField.value = item?.title || '';
+        bodyField.value = item?.body || '';
+        typeField.value = item?.contentType || '';
+        sceneField.value = item?.scenes?.join(', ') || '';
+
+        renderContentCategoryOptions(mainCategory, item?.mainCategory);
+        modal.classList.remove('hidden');
+      }
+
+      function renderContentCategoryOptions(selectEl, current) {
+        if (!selectEl) return;
+        selectEl.innerHTML = '';
+        contentState.categories
+          .filter((c) => c !== '全部')
+          .forEach((cat) => {
+            const opt = document.createElement('option');
+            opt.value = cat;
+            opt.textContent = cat;
+            if (cat === current) opt.selected = true;
+            selectEl.appendChild(opt);
+          });
+      }
+
+      function closeContentModal() {
+        const modal = document.getElementById('contentModal');
+        if (modal) modal.classList.add('hidden');
+        contentState.editingId = null;
+      }
+
+      function saveContentItem() {
+        const name = document.getElementById('contentTitleField').value.trim();
+        const body = document.getElementById('contentBodyField').value.trim();
+        const mainCategory = document.getElementById('contentMainCategory').value;
+        const contentType = document.getElementById('contentTypeField').value;
+        const scenes = document
+          .getElementById('contentSceneTags')
+          .value.split(',')
+          .map((s) => s.trim())
+          .filter(Boolean);
+
+        if (!name || !body) {
+          alert('请填写完整的标题和正文');
+          return;
+        }
+
+        if (contentState.editingId) {
+          contentState.items = contentState.items.map((item) =>
+            item.id === contentState.editingId
+              ? { ...item, title: name, body, mainCategory, contentType, scenes }
+              : item
+          );
+        } else {
+          contentState.items.unshift({
+            id: `c-${Date.now()}`,
+            title: name,
+            body,
+            mainCategory,
+            contentType,
+            scenes,
+          });
+        }
+
+        closeContentModal();
+        renderContentLists();
+        renderContentCategories();
+      }
+
+      function bindContentModal() {
+        const openBtn = document.getElementById('btnNewContent');
+        const closeBtn = document.getElementById('btnCloseContentModal');
+        const cancelBtn = document.getElementById('btnCancelContentModal');
+        const saveBtn = document.getElementById('btnSaveContent');
+
+        if (openBtn) openBtn.addEventListener('click', () => openContentModal());
+        if (closeBtn) closeBtn.addEventListener('click', closeContentModal);
+        if (cancelBtn) cancelBtn.addEventListener('click', closeContentModal);
+        if (saveBtn) saveBtn.addEventListener('click', saveContentItem);
+      }
+
+      function bindContentImport() {
+        const openBtn = document.getElementById('btnBatchImportContent');
+        const modal = document.getElementById('contentImportModal');
+        const closeBtn = document.getElementById('btnCloseContentImport');
+        const cancelBtn = document.getElementById('btnCancelContentImport');
+        const runBtn = document.getElementById('btnRunContentImport');
+        const rawField = document.getElementById('contentImportRaw');
+        const preview = document.getElementById('contentImportPreview');
+
+        const close = () => modal?.classList.add('hidden');
+
+        if (openBtn) {
+          openBtn.addEventListener('click', () => {
+            modal?.classList.remove('hidden');
+            preview.innerHTML = '';
+            rawField.value = '';
+          });
+        }
+
+        [closeBtn, cancelBtn].forEach((btn) => btn?.addEventListener('click', close));
+
+        if (runBtn) {
+          runBtn.addEventListener('click', () => {
+            const lines = rawField.value
+              .split('\n')
+              .map((l) => l.trim())
+              .filter(Boolean);
+            const previewItems = [];
+            lines.forEach((line, idx) => {
+              const [title, body, mainCategory = '', contentType = ''] = line.split('|');
+              if (title && body) {
+                const item = {
+                  id: `c-import-${Date.now()}-${idx}`,
+                  title: title.trim(),
+                  body: body.trim(),
+                  mainCategory: mainCategory.trim() || '',
+                  contentType: contentType.trim() || '',
+                  scenes: [],
+                };
+                previewItems.push(item);
+              }
+            });
+
+            if (!previewItems.length) {
+              preview.textContent = '未识别到有效的文案行';
+              return;
+            }
+
+            preview.innerHTML = previewItems
+              .map(
+                (item) =>
+                  `<div class="preview-row"><div class="preview-title">${item.title}</div><div class="preview-meta">${
+                    item.mainCategory || '未分类'
+                  } · ${item.contentType || '自动识别'}</div><div class="preview-body">${
+                    item.body
+                  }</div></div>`
+              )
+              .join('');
+
+            contentState.items = [...previewItems, ...contentState.items];
+            renderContentLists();
+            renderContentCategories();
+            close();
+          });
+        }
+      }
+
+      function bindContentToolbarActions() {
+        const clearBtn = document.getElementById('btnClearContent');
+        if (clearBtn) {
+          clearBtn.addEventListener('click', () => {
+            if (confirm('确认清空当前文案列表吗？')) {
+              contentState.items = [];
+              renderContentLists();
+              renderContentCategories();
+            }
+          });
+        }
+      }
+
+      function initContentView() {
+        renderContentCategories();
+        setupContentCategories();
+        setupContentFilters();
+        bindContentModal();
+        bindContentImport();
+        bindContentToolbarActions();
+        renderContentLists();
+      }
+
+      document.addEventListener('DOMContentLoaded', initContentView);
+    </script>
   </body>
 </html>
