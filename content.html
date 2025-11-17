@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <title>TitleForge · 文案管理</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"
+    />
+    <link rel="stylesheet" href="assets/styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="assets/supabase.js" defer></script>
+    <script src="assets/classifier.js" defer></script>
+    <!-- 预留：文案逻辑 -->
+    <!-- <script src="assets/app-content.js" defer></script> -->
+  </head>
+  <body class="bg-page">
+    <div class="wrap">
+      <header class="topbar">
+        <div class="topbar-left">
+          <div class="brand">
+            <span class="brand-main">TitleForge</span>
+            <span class="brand-sub">标题与文案管理系统</span>
+          </div>
+        </div>
+        <nav class="topbar-nav">
+          <a href="title.html" class="nav-tab">标题</a>
+          <a href="content.html" class="nav-tab nav-tab-active">文案</a>
+        </nav>
+        <div class="topbar-right">
+          <span id="supabaseStatus" class="pill pill-muted">Connecting…</span>
+        </div>
+      </header>
+
+      <main class="layout">
+        <aside class="sidebar panel">
+          <div class="sidebar-header">
+            <h2 class="panel-title">分类</h2>
+            <button class="function-btn ghost text-xs">新增分类</button>
+          </div>
+          <ul id="contentCategoryList" class="category-list"></ul>
+        </aside>
+
+        <section class="panel content-area">
+          <div class="toolbar">
+            <div class="toolbar-left">
+              <input
+                type="search"
+                class="input"
+                placeholder="搜索文案 / 标题"
+              />
+            </div>
+            <div class="toolbar-center">
+              <!-- 未来：语气、平台、场景等筛选 -->
+            </div>
+            <div class="toolbar-right">
+              <button class="function-btn primary">新增文案</button>
+            </div>
+          </div>
+
+          <div class="table-wrap desktop-only">
+            <table class="data-table zebra">
+              <thead>
+                <tr>
+                  <th class="w-10">#</th>
+                  <th class="w-40">文案标题</th>
+                  <th>正文摘要</th>
+                  <th class="w-28">主分类</th>
+                  <th class="w-28">内容类型</th>
+                  <th class="w-32">操作</th>
+                </tr>
+              </thead>
+              <tbody id="contentTableBody"></tbody>
+            </table>
+          </div>
+
+          <div id="contentMobileList" class="mobile-only space-y-3"></div>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>
