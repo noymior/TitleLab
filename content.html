@@ -1,84 +1,254 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-  <head>
-    <meta charset="UTF-8" />
-    <title>TitleForge · 文案管理</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link
-      rel="stylesheet"
-      href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"
-    />
-    <link rel="stylesheet" href="assets/styles.css" />
-    <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js" defer></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="assets/supabase.js" defer></script>
-    <script src="assets/classifier.js" defer></script>
-    <!-- 预留：文案逻辑 -->
-    <!-- <script src="assets/app-content.js" defer></script> -->
-  </head>
-  <body class="bg-page">
-    <div class="wrap">
-      <header class="topbar">
-        <div class="topbar-left">
-          <div class="brand">
-            <span class="brand-main">TitleForge</span>
-            <span class="brand-sub">标题与文案管理系统</span>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>文案管理 - Title & Copy Management</title>
+
+  <!-- 样式 -->
+  <link rel="stylesheet" href="assets/style.css" />
+
+  <!-- icon -->
+  <link rel="icon" sizes="192x192" href="icon/icon-192.png" />
+  <link rel="icon" sizes="512x512" href="icon/icon-512.png" />
+</head>
+<body>
+  <div class="app-shell">
+    <!-- 顶部栏 -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <div class="logo-mark">
+          <span class="logo-main">C</span>
+        </div>
+        <h1 class="topbar-title">标题与文案管理系统</h1>
+      </div>
+
+      <div class="topbar-actions">
+        <button id="btnTitlePage" type="button" class="function-btn ghost">
+          标题
+        </button>
+        <button id="btnCopyPage" type="button" class="function-btn primary">
+          文案
+        </button>
+        <button id="btnSettings" type="button" class="function-btn ghost">
+          显示设置
+        </button>
+        <button id="btnManagePage" type="button" class="function-btn ghost">
+          管理中心
+        </button>
+      </div>
+    </header>
+
+    <main class="main-layout">
+      <!-- 左侧分类栏 -->
+      <aside class="sidebar panel">
+        <!-- 手机端分类下拉 -->
+        <div id="mobileCategoryWrapper" class="md:hidden mb-3" data-open="0">
+          <button
+            id="mobileCategoryToggle"
+            class="function-btn ghost w-full justify-between"
+          >
+            <span id="mobileCategoryLabel">全部</span>
+            <span>▼</span>
+          </button>
+        </div>
+
+        <div class="sidebar-header">
+          <div class="sidebar-title">文案分类</div>
+          <div class="sidebar-actions">
+            <button id="btnAddCategory" class="function-btn ghost text-xs">
+              新增
+            </button>
+            <button id="btnDeleteCategory" class="function-btn ghost text-xs">
+              删除
+            </button>
+            <button id="btnSortCategory" class="function-btn ghost text-xs">
+              排序
+            </button>
           </div>
         </div>
-        <nav class="topbar-nav">
-          <a href="title.html" class="nav-tab">标题</a>
-          <a href="content.html" class="nav-tab nav-tab-active">文案</a>
-        </nav>
-        <div class="topbar-right">
-          <span id="supabaseStatus" class="pill pill-muted">Connecting…</span>
-        </div>
-      </header>
 
-      <main class="layout">
-        <aside class="sidebar panel">
-          <div class="sidebar-header">
-            <h2 class="panel-title">分类</h2>
-            <button class="function-btn ghost text-xs">新增分类</button>
+        <ul id="categoryList" class="category-list"></ul>
+
+        <div class="sidebar-section">
+          <div class="sidebar-title mt-4 mb-2">云端快照（文案）</div>
+          <div class="flex gap-2">
+            <button id="btnSaveCloud" class="function-btn ghost text-xs">
+              保存云端
+            </button>
+            <button id="btnLoadCloud" class="function-btn ghost text-xs">
+              加载云端
+            </button>
           </div>
-          <ul id="contentCategoryList" class="category-list"></ul>
-        </aside>
+        </div>
+      </aside>
 
-        <section class="panel content-area">
-          <div class="toolbar">
+      <!-- 右侧内容 -->
+      <section class="content">
+        <!-- 工具栏 -->
+        <div class="toolbar panel">
+          <div class="toolbar-row">
             <div class="toolbar-left">
               <input
-                type="search"
+                id="searchInput"
+                type="text"
                 class="input"
-                placeholder="搜索文案 / 标题"
+                placeholder="搜索文案内容…"
+              />
+              <button
+                id="btnClearSearch"
+                class="function-btn ghost text-xs"
+                style="display:none;"
+              >
+                清除
+              </button>
+
+              <select id="filterScene" class="select ml-2">
+                <option value="">场景（全部）</option>
+              </select>
+            </div>
+
+            <div class="toolbar-right">
+              <button id="btnNewCopy" class="function-btn primary text-xs">
+                新增文案
+              </button>
+              <button
+                id="btnBatchImport"
+                class="function-btn ghost text-xs"
+              >
+                批量导入
+              </button>
+              <button id="btnClearAll" class="function-btn ghost text-xs">
+                清空全部
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 桌面表格 -->
+        <div class="panel hidden md:block">
+          <table class="basic-table w-full">
+            <thead>
+              <tr>
+                <th class="w-12">#</th>
+                <th class="text-left">文案内容</th>
+                <th class="w-28 text-left">主分类</th>
+                <th class="w-40 text-center">操作</th>
+              </tr>
+            </thead>
+            <tbody id="copyTableBody"></tbody>
+          </table>
+        </div>
+
+        <!-- 手机端 -->
+        <div id="mobileList" class="md:hidden flex flex-col gap-2"></div>
+      </section>
+    </main>
+
+    <!-- 文案弹窗（结构 = 标题弹窗 100% 一样） -->
+    <div id="copyModal" class="modal-backdrop hidden">
+      <div class="modal panel">
+        <div class="modal-header">
+          <div class="modal-title" id="copyModalTitle">新增文案</div>
+          <button id="btnCloseModal" class="modal-close">×</button>
+        </div>
+
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">文案内容</label>
+            <textarea
+              id="fieldText"
+              class="textarea"
+              rows="4"
+              placeholder="输入文案内容…"
+            ></textarea>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label class="form-label">主分类</label>
+              <select id="fieldMainCategory" class="select"></select>
+            </div>
+            <div class="form-group flex-1">
+              <label class="form-label">文案类型</label>
+              <input
+                id="fieldContentType"
+                class="input"
+                placeholder="如：开头 / 结尾 / 引导语…"
               />
             </div>
-            <div class="toolbar-center">
-              <!-- 未来：语气、平台、场景等筛选 -->
-            </div>
-            <div class="toolbar-right">
-              <button class="function-btn primary">新增文案</button>
-            </div>
           </div>
 
-          <div class="table-wrap desktop-only">
-            <table class="data-table zebra">
-              <thead>
-                <tr>
-                  <th class="w-10">#</th>
-                  <th class="w-40">文案标题</th>
-                  <th>正文摘要</th>
-                  <th class="w-28">主分类</th>
-                  <th class="w-28">内容类型</th>
-                  <th class="w-32">操作</th>
-                </tr>
-              </thead>
-              <tbody id="contentTableBody"></tbody>
-            </table>
+          <div class="form-group">
+            <label class="form-label">场景标签</label>
+            <input
+              id="fieldSceneTags"
+              class="input"
+              placeholder="如：城堡，夜景，咖啡馆…"
+            />
           </div>
+        </div>
 
-          <div id="contentMobileList" class="mobile-only space-y-3"></div>
-        </section>
-      </main>
+        <div class="modal-footer">
+          <button id="btnCancelModal" class="function-btn ghost">取消</button>
+          <button id="btnSaveCopy" class="function-btn primary">
+            保存文案
+          </button>
+        </div>
+      </div>
     </div>
-  </body>
+
+    <!-- 批量导入 -->
+    <div id="importModal" class="modal-backdrop hidden">
+      <div class="modal panel">
+        <div class="modal-header">
+          <div class="modal-title">批量导入文案</div>
+          <button id="btnCloseImport" class="modal-close">×</button>
+        </div>
+
+        <div class="modal-body">
+          <textarea
+            id="importRawInput"
+            class="textarea"
+            rows="8"
+            placeholder="每一行一条文案内容…"
+          ></textarea>
+        </div>
+
+        <div class="modal-footer">
+          <button id="btnCancelImport" class="function-btn ghost">取消</button>
+          <button id="btnRunImport" class="function-btn primary">
+            开始导入
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 云端快照浮层 -->
+    <div id="cloudHistoryPanel" class="cloud-history-panel hidden"></div>
+
+    <!-- Toast -->
+    <div id="toast" class="toast hidden"></div>
+  </div>
+
+  <!-- Supabase -->
+  <script src="assets/supabase-client.js"></script>
+
+  <!-- 文案功能核心 -->
+  <script src="assets/app-copy.js"></script>
+
+  <!-- 顶部导航绑定 -->
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      document.getElementById("btnTitlePage").onclick = () =>
+        (location.href = "index.html");
+      document.getElementById("btnCopyPage").onclick = () =>
+        (location.href = "copy.html");
+      document.getElementById("btnSettings").onclick = () =>
+        (location.href = "settings.html");
+      document.getElementById("btnManagePage").onclick = () =>
+        (location.href = "admin-center.html");
+    });
+  </script>
+</body>
 </html>
