@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <title>文案管理 - 标题与文案库</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="文案管理" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="theme-color" content="#ffffff" />
+    
+    <link rel="stylesheet" href="assets/styles.css" />
+    <link rel="apple-touch-icon" sizes="192x192" href="icon/icon-192.png" />
+    <link rel="apple-touch-icon" sizes="512x512" href="icon/icon-512.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="icon/icon-192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="icon/icon-512.png" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="assets/supabase.js"></script>
+    <script src="assets/classifier.js"></script>
+    <script src="assets/app-content.js"></script>
+  </head>
+  <body class="bg-page">
+    <div class="wrap">
+      <header class="topbar">
+        <div class="topbar-left">
+          <div class="logo-dot"></div>
+          <div class="ml-2">
+            <div class="topbar-title">文案管理</div>
+          </div>
+        </div>
+        <div class="topbar-center">
+          <button class="nav-tab" onclick="window.location.href='title.html'">标题</button>
+          <button class="nav-tab nav-tab-active">文案</button>
+        </div>
+        <div class="topbar-right">
+          <span id="currentUserName" class="pill-muted text-xs"></span>
+          <button id="btnLogout" class="function-btn ghost text-xs btn-compact">退出</button>
+          <button id="btnLoginHeader" class="function-btn ghost text-xs hidden">登陆</button>
+        </div>
+      </header>
+
+      <main class="layout">
+        <aside class="panel w-full md:w-64 md:flex-shrink-0">
+          <div class="flex items-center justify-end mb-3">
+            <div class="flex gap-2">
+              <button id="btnAddCategory" class="function-btn ghost text-xs">新增分类</button>
+              <button id="btnDeleteCategory" class="function-btn ghost text-xs">删除分类</button>
+              <button id="btnSortCategory" class="function-btn ghost text-xs">排序</button>
+            </div>
+          </div>
+          <div id="mobileCategoryWrapper" class="md:hidden mb-2">
+            <button id="mobileCategoryToggle" type="button" class="function-btn ghost w-full flex items-center justify-between">
+              <span id="mobileCategoryLabel">全部</span>
+              <span class="text-xs text-gray-600">分类 ▾</span>
+            </button>
+          </div>
+          <ul id="categoryList" class="category-list"></ul>
+        </aside>
+
+        <section class="flex-1 min-w-0 flex flex-col gap-3">
+          <div class="panel">
+            <div class="toolbar flex items-center gap-3 flex-wrap mb-2">
+              <div class="search-wrapper">
+                <input id="searchInput" type="text" placeholder="搜索文案关键词" class="field-input search-input" />
+                <button id="btnClearSearch" type="button" class="function-btn search-clear-btn text-xs">清除</button>
+              </div>
+              <select id="filterScene" class="field-input filter-select">
+                <option value="">场景（全部）</option>
+                <option value="港迪城堡">港迪城堡</option>
+                <option value="烟花">烟花</option>
+                <option value="夜景">夜景</option>
+                <option value="香港街拍">香港街拍</option>
+              </select>
+            </div>
+            <div class="toolbar-actions mt-1">
+              <button id="btnNewTitle" class="function-btn">新增文案</button>
+              <button id="btnBatchImport" class="function-btn ghost text-xs">批量导入</button>
+              <button id="btnClearAll" class="function-btn ghost text-xs">清空全部</button>
+              <button id="btnSettings" class="function-btn ghost text-xs">设置页面</button>
+              <button id="btnSaveCloud" class="function-btn ghost">保存云端</button>
+              <button id="btnLoadCloud" class="function-btn ghost">加载云端</button>
+              <button id="btnManagePage" class="function-btn ghost" onclick="window.location.href='admin-center.html'">管理页面</button>
+            </div>
+          </div>
+          <div class="panel hidden md:block">
+            <table class="basic-table w-full">
+              <thead>
+                <tr>
+                  <th class="w-12 text-left">#</th>
+                  <th class="text-left">文案标题</th>
+                  <th class="w-28 text-left">主分类</th>
+                  <th class="w-40 text-center">操作</th>
+                </tr>
+              </thead>
+              <tbody id="contentTableBody"></tbody>
+            </table>
+          </div>
+          <div class="md:hidden flex flex-col gap-2" id="contentMobileList"></div>
+        </section>
+      </main>
+      <div id="cloudHistoryPanel" class="cloud-history-panel hidden"></div>
+      <div id="cloudLabelModal" class="modal-backdrop hidden">
+        <div class="modal">
+          <div class="modal-header">
+            <div class="modal-title">保存云端快照</div>
+            <button id="btnCloseCloudLabel" class="icon-btn" aria-label="关闭">×</button>
+          </div>
+          <div class="modal-body">
+            <label class="field-label">快照备注名</label>
+            <input id="cloudLabelInput" type="text" class="field-input" placeholder="例如：11月中旬版本" />
+          </div>
+          <div class="modal-footer">
+            <button id="btnCancelCloudLabel" class="function-btn ghost">取消</button>
+            <button id="btnSaveCloudLabel" class="function-btn">保存</button>
+          </div>
+        </div>
+      </div>
+      <div id="clearConfirmModal" class="modal-backdrop hidden">
+        <div class="modal">
+          <div class="modal-header">
+            <div class="modal-title">清空全部文案</div>
+            <button id="btnCloseClearConfirm" class="icon-btn" aria-label="关闭">×</button>
+          </div>
+          <div class="modal-body">
+            <div class="text-sm">确定清空全部文案？此操作不可恢复。</div>
+          </div>
+          <div class="modal-footer">
+            <button id="btnCancelClear" class="function-btn ghost">取消</button>
+            <button id="btnConfirmClear" class="function-btn">清空</button>
+          </div>
+        </div>
+      </div>
+      <div id="addCategoryModalContent" class="modal-backdrop hidden">
+        <div class="modal">
+          <div class="modal-header">
+            <div class="modal-title">新增分类</div>
+            <button id="btnCloseAddCategoryContent" class="icon-btn" aria-label="关闭">×</button>
+          </div>
+          <div class="modal-body">
+            <label class="field-label">分类名称</label>
+            <input id="addCategoryInputContent" type="text" class="field-input" placeholder="请输入新的分类名称" />
+          </div>
+          <div class="modal-footer">
+            <button id="btnCancelAddCategoryContent" class="function-btn ghost">取消</button>
+            <button id="btnConfirmAddCategoryContent" class="function-btn">保存</button>
+          </div>
+        </div>
+      </div>
+      <div id="deleteCategoryModalContent" class="modal-backdrop hidden">
+        <div class="modal">
+          <div class="modal-header">
+            <div class="modal-title">删除分类</div>
+            <button id="btnCloseDeleteCategoryContent" class="icon-btn" aria-label="关闭">×</button>
+          </div>
+          <div class="modal-body">
+            <div class="text-sm">确定删除分类「<span id="deleteCategoryNameContent"></span>」？</div>
+          </div>
+          <div class="modal-footer">
+            <button id="btnCancelDeleteCategoryContent" class="function-btn ghost">取消</button>
+            <button id="btnConfirmDeleteCategoryContent" class="function-btn">删除</button>
+          </div>
+        </div>
+      </div>
+      <div id="contentModal" class="modal-backdrop hidden">
+        <div class="modal">
+          <div class="modal-header">
+            <div id="contentModalTitle" class="modal-title">新增文案</div>
+            <button id="btnCloseModalContent" class="icon-btn" aria-label="关闭">×</button>
+          </div>
+          <div class="modal-body space-y-3">
+            <div>
+              <label class="field-label">文案内容</label>
+              <textarea id="fieldTextContent" class="field-input" rows="5" placeholder="请输入文案"></textarea>
+            </div>
+            <div class="flex flex-wrap gap-3">
+              <div class="flex-1 min-w-[120px]">
+                <label class="field-label">主分类</label>
+                <select id="fieldMainCategoryContent" class="field-input"></select>
+              </div>
+              <div class="flex-1 min-w-[120px]">
+                <label class="field-label">内容类型</label>
+                <select id="fieldContentTypeContent" class="field-input">
+                  <option value="">自动识别</option>
+                  <option value="展示">出片展示</option>
+                  <option value="攻略">攻略 / 机位</option>
+                  <option value="服务">服务推荐</option>
+                  <option value="节日">节日主题</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label class="field-label">场景标签（可选，多项用逗号分隔）</label>
+              <input id="fieldSceneTagsContent" type="text" class="field-input" placeholder="例如：港迪城堡, 烟花, 夜景" />
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button id="btnCancelModalContent" class="function-btn ghost">取消</button>
+            <button id="btnSaveContent" class="function-btn">保存</button>
+          </div>
+        </div>
+      </div>
+      <div id="cloudLoadConfirmModalContent" class="modal-backdrop hidden">
+        <div class="modal">
+          <div class="modal-header">
+            <div class="modal-title">加载云端快照</div>
+            <button id="btnCloseCloudLoadConfirmContent" class="icon-btn" aria-label="关闭">×</button>
+          </div>
+          <div class="modal-body">
+            <div class="text-sm">确定使用此快照覆盖当前数据？</div>
+          </div>
+          <div class="modal-footer">
+            <button id="btnCancelCloudLoadContent" class="function-btn ghost">取消</button>
+            <button id="btnConfirmCloudLoadContent" class="function-btn">确定</button>
+          </div>
+        </div>
+      </div>
+      <div id="deleteContentModal" class="modal-backdrop hidden">
+        <div class="modal">
+          <div class="modal-header">
+            <div class="modal-title">删除文案</div>
+            <button id="btnCloseDeleteContent" class="icon-btn" aria-label="关闭">×</button>
+          </div>
+          <div class="modal-body">
+            <div class="text-sm">确定删除该文案：</div>
+            <div class="text-xs mt-2" id="deleteContentPreview"></div>
+          </div>
+          <div class="modal-footer">
+            <button id="btnCancelDeleteContent" class="function-btn ghost">取消</button>
+            <button id="btnConfirmDeleteContent" class="function-btn">删除</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="importModalContent" class="modal-backdrop hidden">
+        <div class="modal modal-lg">
+          <div class="modal-header">
+            <div class="modal-title">批量导入文案</div>
+            <button id="btnCloseImportContent" class="icon-btn" aria-label="关闭">×</button>
+          </div>
+          <div class="modal-body grid gap-3 md:grid-cols-2">
+            <div class="space-y-2">
+              <label class="field-label">导入到分类</label>
+              <select id="importCategorySelectContent" class="field-input"></select>
+              <label class="field-label">多行文案（每行一条）</label>
+              <textarea id="importRawInputContent" class="field-input" rows="12" placeholder="粘贴多行文案，每行一条"></textarea>
+            </div>
+            <div class="space-y-2 import-preview-wrapper">
+              <label class="field-label">识别预览</label>
+              <div id="importPreviewContent" class="preview-box"></div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button id="btnCancelImportContent" class="function-btn ghost">取消</button>
+            <button id="btnRunImportContent" class="function-btn">识别并导入</button>
+          </div>
+        </div>
+      </div>
+      <div id="toast" class="toast hidden"></div>
+    </div>
+  </body>
+</html>
