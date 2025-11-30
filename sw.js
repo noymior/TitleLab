@@ -1,4 +1,4 @@
-const CACHE_NAME = 'titlelab-pwa-v3';
+const CACHE_NAME = 'titlelab-pwa-v1';
 const OFFLINE_ASSETS = [
   '/',
   '/index.html',
@@ -12,8 +12,6 @@ const OFFLINE_ASSETS = [
   '/assets/app-content.js',
   '/assets/supabase.js',
   '/assets/classifier.js',
-  '/assets/admin.js',
-  '/assets/settings.js',
   '/manifest.webmanifest',
   '/icon/icon-192.png',
   '/icon/icon-512.png'
@@ -56,7 +54,7 @@ self.addEventListener('fetch', event => {
           caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
           return response;
         })
-        .catch(() => caches.match(new URL('/title.html', self.location.origin)));
+        .catch(() => caches.match('/index.html'));
     })
   );
 });
