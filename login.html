@@ -105,16 +105,8 @@
       'olina': { role: 'user', password: 'jiajia' }
     };
 
-    // 页面加载时检查是否已登录，如果已登录则自动跳转
-    window.addEventListener('DOMContentLoaded', () => {
-      const currentUser = getCurrentUser();
-      if (currentUser && currentUser.username && ALLOWED_USERS[currentUser.username]) {
-        // 验证用户是否仍在允许列表中
-        window.location.href = 'title.html';
-      }
-    });
-
-    document.getElementById('btnLogin').addEventListener('click', async () => {
+    // 登录处理函数
+    async function handleLogin() {
       const u = document.getElementById('loginUsername').value.trim();
       const p = document.getElementById('loginPassword').value || '';
       
@@ -147,6 +139,37 @@
       setTimeout(() => { 
         window.location.href = 'title.html'; 
       }, 400);
+    }
+
+    // 页面加载时检查是否已登录，如果已登录则自动跳转
+    window.addEventListener('DOMContentLoaded', () => {
+      const currentUser = getCurrentUser();
+      if (currentUser && currentUser.username && ALLOWED_USERS[currentUser.username]) {
+        // 验证用户是否仍在允许列表中
+        window.location.href = 'title.html';
+      }
+
+      // 绑定登录按钮点击事件
+      document.getElementById('btnLogin').addEventListener('click', handleLogin);
+
+      // 绑定键盘事件：用户名输入框按回车时聚焦到密码框
+      const usernameInput = document.getElementById('loginUsername');
+      const passwordInput = document.getElementById('loginPassword');
+      
+      usernameInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          passwordInput.focus();
+        }
+      });
+
+      // 绑定键盘事件：密码输入框按回车时直接登录
+      passwordInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          handleLogin();
+        }
+      });
     });
   </script>
 </body>

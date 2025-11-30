@@ -113,6 +113,21 @@ body.bg-page {
   color: var(--text-main);
 }
 
+/* 用户名简写样式 */
+.user-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--brand-blue);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 0;
+}
+
 /* 导航 Tab */
 
 .nav-tab {

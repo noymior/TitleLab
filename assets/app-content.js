@@ -55,7 +55,12 @@ document.addEventListener('DOMContentLoaded', () => {
   bindCloudButtons();
   bindGlobalNavButtons();
   const badge = document.getElementById('currentUserName');
-  if (badge) badge.textContent = user.username;
+  if (badge) {
+    // 获取用户名简写
+    const userInitial = getUserInitial(user.username);
+    badge.textContent = userInitial;
+    badge.className = 'user-badge text-xs';
+  }
   const btnLogout = document.getElementById('btnLogout');
   const btnLoginHeader = document.getElementById('btnLoginHeader');
   if (btnLogout) btnLogout.onclick = () => { try { localStorage.removeItem('current_user_v1'); } catch (_) {} window.location.href = 'login.html'; };
@@ -93,6 +98,16 @@ function openCloudLoadConfirmContent(key) {
 
 function getCurrentUser() {
   try { const raw = localStorage.getItem('current_user_v1'); return raw ? JSON.parse(raw) : null; } catch (_) { return null; }
+}
+
+// 获取用户名简写
+function getUserInitial(username) {
+  if (!username) return '';
+  const userInitials = {
+    'sevenoy': 'S',
+    'olina': 'O'
+  };
+  return userInitials[username.toLowerCase()] || username.charAt(0).toUpperCase();
 }
 
 function stripLeadingIndex(s) {
