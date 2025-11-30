@@ -174,8 +174,10 @@ function renderCategoryList() {
     const li = document.createElement('li');
     li.className = 'category-item' + (cat === state.currentCategory ? ' active' : '');
     li.dataset.cat = cat;
+    // 左侧：分类名（排序模式下可编辑）
     const nameSpan = document.createElement('span');
     nameSpan.className = 'category-name';
+    
     nameSpan.textContent = cat;
     const rightSpan = document.createElement('span');
     rightSpan.className = 'category-right';
@@ -202,11 +204,30 @@ function renderCategoryList() {
       btnDown.className = 'function-btn ghost text-xs btn-inline';
       btnDown.style.marginLeft = '4px';
       btnDown.addEventListener('click', (e) => { e.stopPropagation(); reorderCategory(index, 1); });
+      
+      const btnRename = document.createElement('button');
+      btnRename.type = 'button';
+      btnRename.textContent = '改';
+      btnRename.className = 'function-btn ghost text-xs btn-inline';
+      btnRename.style.marginLeft = '4px';
+      btnRename.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        console.log('[ContentApp] 点击改按钮，分类名称：', cat);
+        await renameCategory(cat);
+      });
+      
       controls.appendChild(btnUp);
       controls.appendChild(btnDown);
+      controls.appendChild(btnRename);
       rightSpan.appendChild(controls);
     }
-    li.addEventListener('click', () => {
+    li.addEventListener('click', (e) => {
+      // 如果点击的是按钮，不处理
+      if (e.target.closest('button')) return;
+      // 排序模式下不切换分类
+      if (state.isSortingCategories) return;
+      
       state.currentCategory = cat;
       renderCategoryList();
       renderContents();
@@ -241,6 +262,85 @@ function reorderCategory(index, delta) {
   state.categories = arr;
   saveCategoriesToLocal();
   renderCategoryList();
+}
+
+// 修改分类名称
+async function renameCategory(oldName) {
+  console.log('[ContentApp] renameCategory 被调用，oldName:', oldName);
+  
+  if (!oldName || oldName === '全部') {
+    showToast('不能修改"全部"分类', 'error');
+    return;
+  }
+  
+  const newName = prompt('请输入新的分类名称：', oldName);
+  console.log('[ContentApp] 用户输入的新名称:', newName);
+  
+  if (!newName || !newName.trim() || newName.trim() === oldName) {
+    return;
+  }
+  
+  if (newName.trim() === '全部') {
+    showToast('不能使用"全部"作为分类名称', 'error');
+    return;
+  }
+  
+  const trimmedName = newName.trim();
+  
+  // 检查新名称是否已存在
+  if (state.categories.includes(trimmedName)) {
+    showToast('分类名称已存在', 'error');
+    return;
+  }
+  
+  // 更新 state.categories
+  const catIndex = state.categories.indexOf(oldName);
+  if (catIndex === -1) return;
+  
+  state.categories[catIndex] = trimmedName;
+  
+  // 更新 localStorage
+  saveCategoriesToLocal();
+  
+  // 如果当前分类是被修改的分类，也要更新
+  if (state.currentCategory === oldName) {
+    state.currentCategory = trimmedName;
+  }
+  
+  // 更新数据库中的所有相关记录
+  if (supabase) {
+    try {
+      const { error } = await supabase
+        .from('contents')
+        .update({ main_category: trimmedName })
+        .eq('main_category', oldName);
+      
+      if (error) throw error;
+      
+      // 更新本地 state.contents
+      state.contents.forEach((content) => {
+        if (content.main_category === oldName) {
+          content.main_category = trimmedName;
+        }
+      });
+      
+      showToast('分类名称已更新');
+    } catch (e) {
+      console.error('[ContentApp] 更新分类名称失败', e);
+      showToast('更新分类名称失败：' + (e.message || ''), 'error');
+      // 回滚
+      state.categories[catIndex] = oldName;
+      saveCategoriesToLocal();
+      if (state.currentCategory === trimmedName) {
+        state.currentCategory = oldName;
+      }
+      return;
+    }
+  }
+  
+  // 重新渲染
+  renderCategoryList();
+  renderContents();
 }
 
 function bindToolbar() {
@@ -487,7 +587,7 @@ function bindCategoryButtons() {
     btnSort.addEventListener('click', () => {
       state.isSortingCategories = !state.isSortingCategories;
       renderCategoryList();
-      showToast(state.isSortingCategories ? '分类排序模式已开启（点击↑↓调整顺序）' : '已退出分类排序模式');
+      showToast(state.isSortingCategories ? '分类排序模式已开启（点击↑↓调整顺序，点击分类名称可编辑）' : '已退出分类排序模式');
     });
   }
 }
