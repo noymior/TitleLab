@@ -1,31 +1,25 @@
-const CACHE_NAME = 'titlelab-pwa-v5';
+const CACHE_NAME = 'titlelab-pwa-v1';
 const OFFLINE_ASSETS = [
-  './',
-  'index.html',
-  'title.html',
-  'content.html',
-  'login.html',
-  'settings.html',
-  'admin-center.html',
-  'assets/styles.css',
-  'assets/app-title.js',
-  'assets/app-content.js',
-  'assets/supabase.js',
-  'assets/classifier.js',
-  'assets/admin.js',
-  'assets/settings.js',
-  'manifest.webmanifest',
-  'icon/icon-192.png',
-  'icon/icon-512.png'
+  '/',
+  '/index.html',
+  '/title.html',
+  '/content.html',
+  '/login.html',
+  '/settings.html',
+  '/admin-center.html',
+  '/assets/styles.css',
+  '/assets/app-title.js',
+  '/assets/app-content.js',
+  '/assets/supabase.js',
+  '/assets/classifier.js',
+  '/manifest.webmanifest',
+  '/icon/icon-192.png',
+  '/icon/icon-512.png'
 ];
-
-const toAbsolute = path => new URL(path, self.registration.scope).toString();
-const OFFLINE_URLS = OFFLINE_ASSETS.map(toAbsolute);
-const OFFLINE_FALLBACK = toAbsolute('index.html');
 
 self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(OFFLINE_URLS)).then(() => self.skipWaiting())
+    caches.open(CACHE_NAME).then(cache => cache.addAll(OFFLINE_ASSETS)).then(() => self.skipWaiting())
   );
 });
 
@@ -60,7 +54,7 @@ self.addEventListener('fetch', event => {
           caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
           return response;
         })
-        .catch(() => caches.match(OFFLINE_FALLBACK));
+        .catch(() => caches.match('/index.html'));
     })
   );
 });
