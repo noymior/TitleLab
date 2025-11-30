@@ -21,6 +21,7 @@ const state = {
   contents: [],
   categories: [...DEFAULT_CATEGORIES],
   currentCategory: '全部',
+  renamingCategory: null, // 正在重命名的分类名称
   filters: { search: '', scene: '' },
   editingId: null,
   isSortingCategories: false
@@ -52,6 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
   bindToolbar();
   bindContentModal();
   bindImportModal();
+  bindRenameCategoryModal();
   bindCloudButtons();
   bindGlobalNavButtons();
   const badge = document.getElementById('currentUserName');
@@ -210,11 +212,11 @@ function renderCategoryList() {
       btnRename.textContent = '改';
       btnRename.className = 'function-btn ghost text-xs btn-inline';
       btnRename.style.marginLeft = '4px';
-      btnRename.addEventListener('click', async (e) => {
+      btnRename.addEventListener('click', (e) => {
         e.stopPropagation();
         e.preventDefault();
         console.log('[ContentApp] 点击改按钮，分类名称：', cat);
-        await renameCategory(cat);
+        openRenameCategoryModal(cat);
       });
       
       controls.appendChild(btnUp);
@@ -264,47 +266,73 @@ function reorderCategory(index, delta) {
   renderCategoryList();
 }
 
-// 修改分类名称
-async function renameCategory(oldName) {
-  console.log('[ContentApp] renameCategory 被调用，oldName:', oldName);
-  
+// 修改分类名称 - 打开模态框
+function openRenameCategoryModal(oldName) {
   if (!oldName || oldName === '全部') {
     showToast('不能修改"全部"分类', 'error');
     return;
   }
   
-  const newName = prompt('请输入新的分类名称：', oldName);
-  console.log('[ContentApp] 用户输入的新名称:', newName);
+  const modal = document.getElementById('renameCategoryModal');
+  const input = document.getElementById('renameCategoryInput');
+  if (!modal || !input) return;
   
-  if (!newName || !newName.trim() || newName.trim() === oldName) {
+  input.value = oldName;
+  state.renamingCategory = oldName;
+  modal.classList.remove('hidden');
+  input.focus();
+  input.select();
+}
+
+// 关闭修改分类名称模态框
+function closeRenameCategoryModal() {
+  const modal = document.getElementById('renameCategoryModal');
+  const input = document.getElementById('renameCategoryInput');
+  if (modal) modal.classList.add('hidden');
+  if (input) input.value = '';
+  state.renamingCategory = null;
+}
+
+// 修改分类名称 - 执行修改
+async function renameCategory() {
+  const oldName = state.renamingCategory;
+  const input = document.getElementById('renameCategoryInput');
+  
+  if (!oldName || !input) return;
+  
+  const newName = input.value.trim();
+  
+  if (!newName || newName === oldName) {
+    closeRenameCategoryModal();
     return;
   }
   
-  if (newName.trim() === '全部') {
+  if (newName === '全部') {
     showToast('不能使用"全部"作为分类名称', 'error');
     return;
   }
   
-  const trimmedName = newName.trim();
-  
   // 检查新名称是否已存在
-  if (state.categories.includes(trimmedName)) {
+  if (state.categories.includes(newName)) {
     showToast('分类名称已存在', 'error');
     return;
   }
   
   // 更新 state.categories
   const catIndex = state.categories.indexOf(oldName);
-  if (catIndex === -1) return;
+  if (catIndex === -1) {
+    closeRenameCategoryModal();
+    return;
+  }
   
-  state.categories[catIndex] = trimmedName;
+  state.categories[catIndex] = newName;
   
   // 更新 localStorage
   saveCategoriesToLocal();
   
   // 如果当前分类是被修改的分类，也要更新
   if (state.currentCategory === oldName) {
-    state.currentCategory = trimmedName;
+    state.currentCategory = newName;
   }
   
   // 更新数据库中的所有相关记录
@@ -312,7 +340,7 @@ async function renameCategory(oldName) {
     try {
       const { error } = await supabase
         .from('contents')
-        .update({ main_category: trimmedName })
+        .update({ main_category: newName })
         .eq('main_category', oldName);
       
       if (error) throw error;
@@ -320,7 +348,7 @@ async function renameCategory(oldName) {
       // 更新本地 state.contents
       state.contents.forEach((content) => {
         if (content.main_category === oldName) {
-          content.main_category = trimmedName;
+          content.main_category = newName;
         }
       });
       
@@ -331,16 +359,54 @@ async function renameCategory(oldName) {
       // 回滚
       state.categories[catIndex] = oldName;
       saveCategoriesToLocal();
-      if (state.currentCategory === trimmedName) {
+      if (state.currentCategory === newName) {
         state.currentCategory = oldName;
       }
+      closeRenameCategoryModal();
       return;
     }
   }
   
+  closeRenameCategoryModal();
+  
   // 重新渲染
   renderCategoryList();
   renderContents();
+}
+
+// 绑定修改分类名称模态框
+function bindRenameCategoryModal() {
+  const modal = document.getElementById('renameCategoryModal');
+  const btnClose = document.getElementById('btnCloseRenameCategory');
+  const btnCancel = document.getElementById('btnCancelRenameCategory');
+  const btnConfirm = document.getElementById('btnConfirmRenameCategory');
+  const input = document.getElementById('renameCategoryInput');
+  
+  if (btnClose) btnClose.addEventListener('click', closeRenameCategoryModal);
+  if (btnCancel) btnCancel.addEventListener('click', closeRenameCategoryModal);
+  if (btnConfirm) btnConfirm.addEventListener('click', renameCategory);
+  
+  // 点击背景关闭
+  if (modal) {
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        closeRenameCategoryModal();
+      }
+    });
+  }
+  
+  // 按 Enter 键确认
+  if (input) {
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        renameCategory();
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        closeRenameCategoryModal();
+      }
+    });
+  }
 }
 
 function bindToolbar() {
@@ -587,7 +653,7 @@ function bindCategoryButtons() {
     btnSort.addEventListener('click', () => {
       state.isSortingCategories = !state.isSortingCategories;
       renderCategoryList();
-      showToast(state.isSortingCategories ? '分类排序模式已开启（点击↑↓调整顺序，点击分类名称可编辑）' : '已退出分类排序模式');
+      showToast(state.isSortingCategories ? '分类排序模式已开启（点击↑↓调整顺序，点击"改"按钮可修改分类名称）' : '已退出分类排序模式');
     });
   }
 }
