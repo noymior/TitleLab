@@ -4,7 +4,7 @@ const DEFAULT_DISPLAY_SETTINGS = {
   brandHover: '#1477dd',
   ghostColor: '#eef2ff',
   ghostHover: '#e2e8ff',
-  stripeColor: '#f9fafb',
+  stripeColor: '#E2F0FF',
   hoverColor: '#eef2ff',
   scenes: ['港迪城堡', '烟花', '夜景', '香港街拍'],
   titleText: '标题与文案管理系统',
@@ -35,6 +35,8 @@ function saveDisplaySettings(nextSettings) {
   localStorage.setItem(DISPLAY_SETTINGS_KEY, JSON.stringify(settingsState));
   applyDisplayPreview();
   showSettingsToast('已保存并应用');
+  // 触发自定义事件，通知其他页面更新场景下拉菜单
+  window.dispatchEvent(new CustomEvent('settingsUpdated'));
 }
 
 function applyDisplayPreview() {
@@ -61,9 +63,14 @@ function bindColorInput(id, key) {
   input.value = settingsState[key];
   if (!input.dataset.bound) {
     input.dataset.bound = '1';
-    input.addEventListener('input', (e) => {
-      saveDisplaySettings({ [key]: e.target.value });
-    });
+    const fn = debounce((val) => {
+      if (isValidCssColor(val)) {
+        saveDisplaySettings({ [key]: val });
+      } else {
+        showSettingsToast('颜色格式无效');
+      }
+    }, 300);
+    input.addEventListener('input', (e) => fn(e.target.value));
   }
 }
 
@@ -73,9 +80,10 @@ function bindTextInput(id, key) {
   input.value = settingsState[key] || '';
   if (!input.dataset.bound) {
     input.dataset.bound = '1';
-    input.addEventListener('input', (e) => {
-      saveDisplaySettings({ [key]: e.target.value.trim() });
-    });
+    const fn = debounce((val) => {
+      saveDisplaySettings({ [key]: val.trim() });
+    }, 300);
+    input.addEventListener('input', (e) => fn(e.target.value));
   }
 }
 
@@ -94,10 +102,11 @@ function renderSceneList() {
 
   settingsState.scenes.forEach((scene, index) => {
     const row = document.createElement('div');
-    row.className = 'panel mb-2 flex items-center justify-between';
+    row.className = 'panel mb-2';
 
     const name = document.createElement('div');
-    name.className = 'text-sm font-medium';
+    name.className = 'text-base font-medium';
+    name.style.marginBottom = '8px';
     name.textContent = scene;
 
     const actions = document.createElement('div');
@@ -108,20 +117,34 @@ function renderSceneList() {
     editBtn.className = 'function-btn ghost text-xs btn-inline';
     editBtn.textContent = '修改';
     editBtn.addEventListener('click', () => {
-      const next = prompt('修改场景名称', scene);
-      if (next === null) return;
-      const trimmed = next.trim();
-      if (!trimmed) return;
-      const dup = settingsState.scenes.some(
-        (item, idx) => item === trimmed && idx !== index
-      );
-      if (dup) {
-        showSettingsToast('已存在同名场景');
-        return;
-      }
-      settingsState.scenes[index] = trimmed;
-      saveDisplaySettings({ scenes: [...settingsState.scenes] });
-      renderSceneList();
+      const editor = document.createElement('input');
+      editor.type = 'text';
+      editor.className = 'field-input';
+      editor.value = scene;
+      const saveBtn = document.createElement('button');
+      saveBtn.type = 'button';
+      saveBtn.className = 'function-btn text-xs btn-inline';
+      saveBtn.textContent = '保存';
+      const cancelBtn = document.createElement('button');
+      cancelBtn.type = 'button';
+      cancelBtn.className = 'function-btn ghost text-xs btn-inline';
+      cancelBtn.textContent = '取消';
+      const area = document.createElement('div');
+      area.className = 'flex items-center gap-2';
+      area.appendChild(editor);
+      area.appendChild(saveBtn);
+      area.appendChild(cancelBtn);
+      row.replaceChild(area, name);
+      saveBtn.addEventListener('click', () => {
+        const trimmed = (editor.value || '').trim();
+        if (!trimmed) return;
+        const dup = settingsState.scenes.some((item, idx) => item === trimmed && idx !== index);
+        if (dup) { showSettingsToast('已存在同名场景'); return; }
+        settingsState.scenes[index] = trimmed;
+        saveDisplaySettings({ scenes: [...settingsState.scenes] });
+        renderSceneList();
+      });
+      cancelBtn.addEventListener('click', () => { renderSceneList(); });
     });
 
     const delBtn = document.createElement('button');
@@ -134,8 +157,34 @@ function renderSceneList() {
       renderSceneList();
     });
 
+    const upBtn = document.createElement('button');
+    upBtn.type = 'button';
+    upBtn.className = 'function-btn ghost text-xs btn-inline';
+    upBtn.textContent = '上移';
+    upBtn.addEventListener('click', () => {
+      if (index <= 0) return;
+      const arr = [...settingsState.scenes];
+      [arr[index - 1], arr[index]] = [arr[index], arr[index - 1]];
+      saveDisplaySettings({ scenes: arr });
+      renderSceneList();
+    });
+
+    const downBtn = document.createElement('button');
+    downBtn.type = 'button';
+    downBtn.className = 'function-btn ghost text-xs btn-inline';
+    downBtn.textContent = '下移';
+    downBtn.addEventListener('click', () => {
+      if (index >= settingsState.scenes.length - 1) return;
+      const arr = [...settingsState.scenes];
+      [arr[index + 1], arr[index]] = [arr[index], arr[index + 1]];
+      saveDisplaySettings({ scenes: arr });
+      renderSceneList();
+    });
+
     actions.appendChild(editBtn);
     actions.appendChild(delBtn);
+    actions.appendChild(upBtn);
+    actions.appendChild(downBtn);
     row.appendChild(name);
     row.appendChild(actions);
     list.appendChild(row);
@@ -173,6 +222,46 @@ function bindResetButton() {
   });
 }
 
+function bindImportExport() {
+  const btnExp = document.getElementById('btnExportSettings');
+  const btnImp = document.getElementById('btnImportSettings');
+  const fileInput = document.getElementById('settingsFileInput');
+  if (btnExp) btnExp.addEventListener('click', () => {
+    const payload = { key: DISPLAY_SETTINGS_KEY, version: 'v1', savedAt: Date.now(), data: settingsState };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8;' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `settings-${Date.now()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    showSettingsToast('已导出设置');
+  });
+  if (btnImp && fileInput) {
+    btnImp.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', async (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+      try {
+        const text = await file.text();
+        const payload = JSON.parse(text);
+        if (!payload || !payload.data || typeof payload.data !== 'object') throw new Error('格式错误');
+        const next = { ...DEFAULT_DISPLAY_SETTINGS, ...payload.data };
+        const scenes = Array.isArray(next.scenes) ? next.scenes.filter(Boolean) : [];
+        settingsState = { ...next, scenes };
+        localStorage.setItem(DISPLAY_SETTINGS_KEY, JSON.stringify(settingsState));
+        hydrateFormValues();
+        applyDisplayPreview();
+        showSettingsToast('已导入并应用');
+      } catch (_) {
+        showSettingsToast('导入失败');
+      } finally {
+        e.target.value = '';
+      }
+    });
+  }
+}
+
 function hydrateFormValues() {
   bindTextInput('titleTextInput', 'titleText');
   bindColorInput('titleColorInput', 'titleColor');
@@ -194,12 +283,70 @@ function showSettingsToast(msg) {
   el._timer = setTimeout(() => el.classList.add('hidden'), 1600);
 }
 
+// 允许登录的用户列表（与 login.html 保持一致）
+const ALLOWED_USERS = ['sevenoy', 'olina'];
+
+function validateUser(user) {
+  if (!user || !user.username) return false;
+  return ALLOWED_USERS.includes(user.username);
+}
+
 function initSettingsPage() {
+  const user = getCurrentUser();
+  if (!user || !validateUser(user)) { 
+    // 清除无效的用户信息
+    try { localStorage.removeItem('current_user_v1'); } catch (_) {}
+    window.location.href = 'login.html'; 
+    return; 
+  }
   settingsState = loadDisplaySettings();
   hydrateFormValues();
   applyDisplayPreview();
   bindSceneAdder();
   bindResetButton();
+  bindImportExport();
+  const badge = document.getElementById('currentUserName');
+  if (user && badge) {
+    // 获取用户名简写
+    const userInitial = getUserInitial(user.username);
+    badge.textContent = userInitial;
+    badge.className = 'user-badge text-xs';
+  }
+  const btnLogout = document.getElementById('btnLogout');
+  const btnLoginHeader = document.getElementById('btnLoginHeader');
+  if (btnLogout) btnLogout.onclick = () => { try { localStorage.removeItem('current_user_v1'); } catch (_) {} window.location.href = 'login.html'; };
+  if (btnLoginHeader) btnLoginHeader.onclick = () => { window.location.href = 'login.html'; };
+  if (btnLogout) btnLogout.classList.remove('hidden');
+  if (btnLoginHeader) btnLoginHeader.classList.add('hidden');
 }
 
 document.addEventListener('DOMContentLoaded', initSettingsPage);
+
+function getCurrentUser() {
+  try { const raw = localStorage.getItem('current_user_v1'); return raw ? JSON.parse(raw) : null; } catch (_) { return null; }
+}
+
+// 获取用户名简写
+function getUserInitial(username) {
+  if (!username) return '';
+  const userInitials = {
+    'sevenoy': 'S',
+    'olina': 'O'
+  };
+  return userInitials[username.toLowerCase()] || username.charAt(0).toUpperCase();
+}
+
+function debounce(fn, delay) {
+  let t;
+  return function(...args) {
+    clearTimeout(t);
+    t = setTimeout(() => fn.apply(this, args), delay);
+  };
+}
+
+function isValidCssColor(val) {
+  const s = new Option().style;
+  s.color = '';
+  s.color = val;
+  return s.color !== '';
+}

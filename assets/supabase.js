@@ -11,7 +11,6 @@ if (!window.supabase) {
   console.error('❌ Supabase JS SDK 未加载，请检查 <script> 引用顺序');
 }
 
-// 创建客户端（前提是 SDK 已加载）
 const supabaseClient = window.supabase
   ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
   : null;
@@ -25,22 +24,19 @@ async function pingSupabase() {
     const el = document.getElementById('supabaseStatus');
     if (!el || !supabaseClient) return;
 
-    // titles 表要在 Supabase 里建好
     const { error } = await supabaseClient.from('titles').select('id').limit(1);
 
     if (error) {
       console.error('Supabase error:', error);
-      el.textContent = 'DB Error';
-      el.classList.remove('pill-muted');
-      el.classList.add('pill');
-      el.style.backgroundColor = '#fee2e2';
-      el.style.color = '#b91c1c';
+      el.textContent = '不在线';
+      el.classList.add('pill-muted');
+      el.classList.remove('pill');
+      el.removeAttribute('style');
     } else {
-      el.textContent = 'Supabase 在线';
-      el.classList.remove('pill-muted');
-      el.classList.add('pill');
-      el.style.backgroundColor = '#dcfce7';
-      el.style.color = '#166534';
+      el.textContent = '在线';
+      el.classList.add('pill-muted');
+      el.classList.remove('pill');
+      el.removeAttribute('style');
     }
   } catch (e) {
     console.error(e);
@@ -48,3 +44,226 @@ async function pingSupabase() {
 }
 
 document.addEventListener('DOMContentLoaded', pingSupabase);
+
+function formatTime(ts) {
+  try {
+    return new Date(ts).toLocaleString();
+  } catch (_) {
+    return '';
+  }
+}
+
+async function fetchTableAll(table) {
+  if (!supabaseClient) return [];
+  const { data, error } = await supabaseClient
+    .from(table)
+    .select('*')
+    .order('created_at', { ascending: true });
+  if (error) return [];
+  try {
+    const raw = localStorage.getItem('current_user_v1');
+    const user = raw ? JSON.parse(raw) : null;
+    const tag = user ? `user:${user.username}` : null;
+    if (!tag) return data || [];
+    return (data || []).filter((it) => Array.isArray(it.scene_tags) && it.scene_tags.includes(tag));
+  } catch (_) {
+    return data || [];
+  }
+}
+
+async function upsertSnapshot(row) {
+  const { error } = await supabaseClient
+    .from('snapshots')
+    .upsert([row], { onConflict: 'key' });
+  if (error) throw error;
+}
+
+async function tryListUnifiedSnapshots(limit = 5) {
+  if (!supabaseClient) return { rows: [], source: 'none' };
+  const { data, error } = await supabaseClient
+    .from('snapshots')
+    .select('key, payload, updated_at')
+    .order('updated_at', { ascending: false })
+    .limit(limit);
+  if (error) return { rows: [], source: 'error' };
+  return { rows: data || [], source: 'snapshots' };
+}
+
+async function tryListTitleSnapshots(limit = 5) {
+  if (!supabaseClient) return { rows: [], source: 'none' };
+  const { data, error } = await supabaseClient
+    .from('title_snapshots')
+    .select('key, payload, updated_at')
+    .neq('key', 'default')
+    .order('updated_at', { ascending: false })
+    .limit(limit);
+  if (error) return { rows: [], source: 'error' };
+  return { rows: data || [], source: 'title_snapshots' };
+}
+
+async function clearAndInsert(table, rows) {
+  let user = null;
+  try { const raw = localStorage.getItem('current_user_v1'); user = raw ? JSON.parse(raw) : null; } catch (_) {}
+  const tag = user ? `user:${user.username}` : null;
+  if (tag) {
+    const { data: existing } = await supabaseClient
+      .from(table)
+      .select('id, scene_tags');
+    const ids = (existing || [])
+      .filter((r) => Array.isArray(r.scene_tags) && r.scene_tags.includes(tag))
+      .map((r) => r.id);
+    if (ids.length) {
+      const { error: delError } = await supabaseClient.from(table).delete().in('id', ids);
+      if (delError) throw delError;
+    }
+  } else {
+    const { error: delError } = await supabaseClient
+      .from(table)
+      .delete()
+      .not('id', 'is', null);
+    if (delError) throw delError;
+  }
+  if (!rows || rows.length === 0) return;
+  const rowsWithTag = tag ? rows.map((r) => ({ ...r, scene_tags: Array.from(new Set([...(r.scene_tags || []), tag])) })) : rows;
+  const { error: insError } = await supabaseClient.from(table).insert(rowsWithTag);
+  if (insError) throw insError;
+}
+
+window.snapshotService = {
+  async saveUnifiedSnapshotFromCloud(label, opts = {}) {
+    if (!supabaseClient) throw new Error('supabase offline');
+    const titles = await fetchTableAll('titles');
+    const contents = await fetchTableAll('contents');
+    const titleCatsRaw = localStorage.getItem('title_categories_v1');
+    const contentCatsRaw = localStorage.getItem('content_categories_v1');
+    let titleCats = [];
+    let contentCats = [];
+    try {
+      titleCats = JSON.parse(titleCatsRaw || '[]');
+    } catch (_) {}
+    try {
+      contentCats = JSON.parse(contentCatsRaw || '[]');
+    } catch (_) {}
+    const viewSettingsRaw = localStorage.getItem('display_settings_v1');
+    let viewSettings = {};
+    try {
+      viewSettings = JSON.parse(viewSettingsRaw || '{}');
+    } catch (_) {}
+    const payload = {
+      ver: 2,
+      snapshot_label: label || '',
+      updated_at: Date.now(),
+      titles,
+      contents,
+      categories: { title: titleCats, content: contentCats },
+      viewSettings
+    };
+    let user = null;
+    try { const raw = localStorage.getItem('current_user_v1'); user = raw ? JSON.parse(raw) : null; } catch (_) {}
+    const row = {
+      key: `${user ? 'user_'+user.username+'_' : ''}manual_${Date.now()}`,
+      payload,
+      updated_at: new Date().toISOString()
+    };
+    await upsertSnapshot(row);
+    return {
+      titleCount: Array.isArray(titles) ? titles.length : 0,
+      contentCount: Array.isArray(contents) ? contents.length : 0,
+      updatedText: formatTime(row.updated_at)
+    };
+  },
+  async listUnified(limit = 5) {
+    const first = await tryListUnifiedSnapshots(limit);
+    if (first.source === 'snapshots' && first.rows.length) {
+      return first.rows.map((r) => ({
+        key: r.key,
+        label: (r.payload && r.payload.snapshot_label) || '(未命名)',
+        titleCount: Array.isArray(r.payload && r.payload.titles)
+          ? r.payload.titles.length
+          : 0,
+        contentCount: Array.isArray(r.payload && r.payload.contents)
+          ? r.payload.contents.length
+          : 0,
+        updatedText: formatTime(r.updated_at),
+        source: 'snapshots'
+      }));
+    }
+    const fallback = await tryListTitleSnapshots(limit);
+    return fallback.rows.map((r) => ({
+      key: r.key,
+      label: (r.payload && r.payload.snapshot_label) || '(未命名)',
+      titleCount: Array.isArray(r.payload && r.payload.titles)
+        ? r.payload.titles.length
+        : 0,
+      contentCount: 0,
+      updatedText: formatTime(r.updated_at),
+      source: 'title_snapshots'
+    }));
+  },
+  async loadUnifiedSnapshot(key, apply = 'both') {
+    if (!supabaseClient) throw new Error('supabase offline');
+    let payload = null;
+    try {
+      const { data } = await supabaseClient
+        .from('snapshots')
+        .select('payload')
+        .eq('key', key)
+        .maybeSingle();
+      payload = data && data.payload;
+    } catch (_) {}
+    if (!payload) {
+      const { data } = await supabaseClient
+        .from('title_snapshots')
+        .select('payload')
+        .eq('key', key)
+        .maybeSingle();
+      payload = data && data.payload;
+    }
+    if (!payload) throw new Error('snapshot not found');
+    const titles = Array.isArray(payload.titles) ? payload.titles : [];
+    const contents = Array.isArray(payload.contents) ? payload.contents : [];
+    if (apply === 'both' || apply === 'title') {
+      await clearAndInsert(
+        'titles',
+        titles.map((t) => ({
+          text: t.text,
+          main_category: t.main_category || null,
+          content_type: t.content_type || null,
+          scene_tags: Array.isArray(t.scene_tags) ? t.scene_tags : [],
+          usage_count: t.usage_count || 0,
+          created_at: t.created_at || new Date().toISOString()
+        }))
+      );
+    }
+    if (apply === 'both' || apply === 'content') {
+      await clearAndInsert(
+        'contents',
+        contents.map((c) => ({
+          text: c.text,
+          main_category: c.main_category || null,
+          content_type: c.content_type || null,
+          scene_tags: Array.isArray(c.scene_tags) ? c.scene_tags : [],
+          usage_count: c.usage_count || 0,
+          created_at: c.created_at || new Date().toISOString()
+        }))
+      );
+    }
+    if (payload.categories && payload.categories.title) {
+      localStorage.setItem(
+        'title_categories_v1',
+        JSON.stringify(payload.categories.title)
+      );
+    }
+    if (payload.categories && payload.categories.content) {
+      localStorage.setItem(
+        'content_categories_v1',
+        JSON.stringify(payload.categories.content)
+      );
+    }
+    return {
+      titleCount: titles.length,
+      contentCount: contents.length,
+      updatedText: formatTime(payload.updated_at || Date.now())
+    };
+  }
+};
