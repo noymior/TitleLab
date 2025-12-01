@@ -22,9 +22,11 @@
     <script src="assets/app-content.js"></script>
     <script src="assets/pwa.js"></script>
   </head>
-  <body class="bg-page">
+  <body class="bg-page" data-page="content">
     <div class="wrap">
+      <!-- 顶部栏 -->
       <header class="topbar">
+        <!-- 左：Logo + 主标题（蓝色） -->
         <div class="topbar-left">
           <div class="logo-dot"></div>
           <div class="ml-2">
@@ -95,7 +97,7 @@
                   <th class="w-40 text-center">操作</th>
                 </tr>
               </thead>
-              <tbody id="contentTableBody"></tbody>
+              <tbody id="titleTableBody"></tbody>
             </table>
           </div>
           <div class="md:hidden flex flex-col gap-2" id="contentMobileList"></div>

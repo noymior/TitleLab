@@ -7,6 +7,12 @@ console.log('[TitleApp] app-title.js loaded');
 
 const supabase = window.supabaseClient || null;
 
+const PAGE_MODE = window.location.pathname.includes('content')
+  ? 'content'
+  : 'title';
+const ITEM_TABLE = PAGE_MODE === 'content' ? 'contents' : 'titles';
+const COUNTER_TABLE = PAGE_MODE === 'content' ? 'titles' : 'contents';
+
 const DEFAULT_CATEGORIES = ['全部', '亲子', '情侣', '闺蜜', '单人', '烟花', '夜景'];
 const CATEGORY_LS_KEY = 'title_categories_v1';
 const DISPLAY_SETTINGS_KEY = 'display_settings_v1';
@@ -599,7 +605,7 @@ async function loadTitlesFromCloud() {
   }
   try {
     const { data, error } = await supabase
-      .from('titles')
+      .from(ITEM_TABLE)
       .select('*')
       // 改为按 created_at 倒序：最新在最上
       .order('created_at', { ascending: false });
@@ -780,7 +786,7 @@ async function copyTitle(item) {
     const newCount = (item.usage_count || 0) + 1;
 
     await supabase
-      .from('titles')
+      .from(ITEM_TABLE)
       .update({ usage_count: newCount })
       .eq('id', item.id);
 
@@ -804,7 +810,7 @@ async function deleteTitle(item) {
   if (!supabase || !item.id) return;
 
   try {
-    await supabase.from('titles').delete().eq('id', item.id);
+    await supabase.from(ITEM_TABLE).delete().eq('id', item.id);
     showToast('已删除');
   } catch (e) {
     console.error('[TitleApp] 删除失败', e);
@@ -1065,7 +1071,7 @@ async function saveTitleFromModal() {
       // ====== 情况一：编辑已有标题 ======
 
       const { error } = await supabase
-        .from('titles')
+        .from(ITEM_TABLE)
         .update(payload)
         .eq('id', state.editingId);
 
@@ -1091,7 +1097,7 @@ async function saveTitleFromModal() {
 
       // 要回写新插入的那条记录，所以加上 .select().single()
       const { data, error } = await supabase
-        .from('titles')
+        .from(ITEM_TABLE)
         .insert([insertPayload])
         .select()
         .single();
@@ -1208,7 +1214,7 @@ async function runImport() {
   console.log('[TitleApp] 批量导入 rows =', rows, 'mainCategory =', mainCategory, 'accountCategory =', accountCategory);
 
   try {
-    const { error } = await supabase.from('titles').insert(rows);
+    const { error } = await supabase.from(ITEM_TABLE).insert(rows);
     if (error) throw error;
     showToast(`批量导入成功，共 ${rows.length} 条`);
     closeImportModal();
