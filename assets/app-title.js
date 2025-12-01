@@ -122,6 +122,9 @@ document.addEventListener('DOMContentLoaded', () => {
   renderCategoryList();
   bindCategoryButtons();
   setupMobileCategoryDropdown();
+  
+  // 初始化账号分类下拉菜单
+  refreshAccountCategorySelects();
 
   // 工具栏 / 弹窗 / 云端 / 全局按钮
   bindToolbar();
@@ -326,6 +329,7 @@ function reorderCategory(index, delta) {
 
   saveCategoriesToLocal();
   renderCategoryList();
+  refreshAccountCategorySelects();
 }
 
 // 修改分类名称 - 打开模态框
@@ -434,6 +438,9 @@ async function renameCategory() {
   // 重新渲染
   renderCategoryList();
   renderTitles();
+  
+  // 更新所有账号分类下拉菜单
+  refreshAccountCategorySelects();
 }
 
 // 绑定修改分类名称模态框
@@ -861,6 +868,8 @@ function openTitleModal(item) {
 
   // 初始化弹窗下拉分类选项
   refreshModalCategoryOptions(mainCatEl);
+  // 刷新账号分类下拉菜单
+  refreshAccountCategorySelects();
 
   if (item && item.id) {
     state.editingId = item.id;
@@ -907,6 +916,69 @@ function refreshModalCategoryOptions(selectEl) {
     opt.textContent = cat;
     selectEl.appendChild(opt);
   });
+}
+
+// 刷新账号分类下拉菜单（从 state.categories 获取，排除"全部"）
+function refreshAccountCategorySelects() {
+  const cats = state.categories.filter((c) => c !== '全部');
+  
+  // 更新 filterScene（场景筛选）
+  const filterScene = document.getElementById('filterScene');
+  if (filterScene) {
+    const prevValue = filterScene.value;
+    filterScene.innerHTML = '<option value="">账号分类</option>';
+    cats.forEach((cat) => {
+      const opt = document.createElement('option');
+      opt.value = cat;
+      opt.textContent = cat;
+      filterScene.appendChild(opt);
+    });
+    // 如果之前选中的值仍然存在，保持选中
+    if (cats.includes(prevValue)) {
+      filterScene.value = prevValue;
+    } else {
+      filterScene.value = '';
+      state.filters.scene = '';
+    }
+  }
+  
+  // 更新 fieldContentType（新增标题模态框中的账号分类）
+  const fieldContentType = document.getElementById('fieldContentType');
+  if (fieldContentType) {
+    const prevValue = fieldContentType.value;
+    fieldContentType.innerHTML = '<option value="">账号分类</option>';
+    cats.forEach((cat) => {
+      const opt = document.createElement('option');
+      opt.value = cat;
+      opt.textContent = cat;
+      fieldContentType.appendChild(opt);
+    });
+    // 如果之前选中的值仍然存在，保持选中
+    if (cats.includes(prevValue)) {
+      fieldContentType.value = prevValue;
+    } else {
+      fieldContentType.value = '';
+    }
+  }
+  
+  // 更新 importAccountCategorySelect（批量导入模态框中的账号分类）
+  const importAccountCategorySelect = document.getElementById('importAccountCategorySelect');
+  if (importAccountCategorySelect) {
+    const prevValue = importAccountCategorySelect.value;
+    importAccountCategorySelect.innerHTML = '<option value="">账号分类</option>';
+    cats.forEach((cat) => {
+      const opt = document.createElement('option');
+      opt.value = cat;
+      opt.textContent = cat;
+      importAccountCategorySelect.appendChild(opt);
+    });
+    // 如果之前选中的值仍然存在，保持选中
+    if (cats.includes(prevValue)) {
+      importAccountCategorySelect.value = prevValue;
+    } else {
+      importAccountCategorySelect.value = '';
+    }
+  }
 }
 
 async function saveTitleFromModal() {
@@ -1050,6 +1122,9 @@ function openImportModal() {
     });
     sel.value = state.currentCategory === '全部' ? '' : state.currentCategory;
   }
+  
+  // 刷新账号分类下拉菜单
+  refreshAccountCategorySelects();
 
   modal.classList.remove('hidden');
 }
@@ -1279,6 +1354,7 @@ function openAddCategoryModal() {
     state.categories.push(trimmed);
     saveCategoriesToLocal();
     renderCategoryList();
+    refreshAccountCategorySelects();
     showToast('分类已新增');
     close();
   };
@@ -1306,6 +1382,7 @@ function openDeleteCategoryModal() {
     saveCategoriesToLocal();
     renderCategoryList();
     renderTitles();
+    refreshAccountCategorySelects();
     showToast('分类已删除');
     close();
   };
