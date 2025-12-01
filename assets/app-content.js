@@ -753,8 +753,21 @@ function openContentModal(item) {
     if (titleEl) titleEl.textContent = '修改文案';
     if (textEl) textEl.value = item.text || '';
     if (mainCatEl) mainCatEl.value = item.main_category || '';
-    if (typeEl) typeEl.value = item.content_type || '';
-    if (sceneEl) sceneEl.value = Array.isArray(item.scene_tags) ? item.scene_tags.join(', ') : '';
+    
+    // 从 scene_tags 中提取账号分类（场景管理中的值）
+    const settings = getDisplaySettings();
+    const scenes = settings.scenes || [];
+    const sceneTags = Array.isArray(item.scene_tags) ? item.scene_tags : [];
+    const accountCategory = sceneTags.find(tag => scenes.includes(tag));
+    if (typeEl) typeEl.value = accountCategory || item.content_type || '';
+    
+    // 场景标签（排除账号分类和用户标签）
+    const user = getCurrentUser();
+    const userTagValue = user ? userTag(user.username) : '';
+    const sceneTagsOnly = sceneTags.filter(tag => 
+      !scenes.includes(tag) && tag !== userTagValue
+    );
+    if (sceneEl) sceneEl.value = sceneTagsOnly.join(', ');
   } else {
     state.editingId = null;
     if (titleEl) titleEl.textContent = '新增文案';
@@ -801,8 +814,15 @@ async function saveContentFromModal() {
   if (!text) { showToast('文案不能为空', 'error'); return; }
   const sceneTags = sceneRaw ? sceneRaw.split(/[，,、]/).map((s) => s.trim()).filter(Boolean) : [];
   const user = getCurrentUser(); if (!user) { showToast('请先登录', 'error'); return; }
-  const mergedTags = Array.from(new Set([...(sceneTags || []), userTag(user.username)]));
-  const payload = { text, main_category: cat, content_type: type, scene_tags: mergedTags };
+  
+  // 账号分类（fieldContentTypeContent）应该添加到 scene_tags 中
+  const allSceneTags = [...(sceneTags || [])];
+  if (type) {
+    allSceneTags.push(type);
+  }
+  allSceneTags.push(userTag(user.username));
+  
+  const payload = { text, main_category: cat, content_type: type, scene_tags: Array.from(new Set(allSceneTags)) };
   if (!supabase) { showToast('未配置 Supabase，无法保存到云端', 'error'); return; }
   const prevCategory = state.currentCategory;
   try {
@@ -956,17 +976,24 @@ async function runImport() {
   const lines = raw.split('\n').map((s) => stripLeadingIndex(s).trim()).filter(Boolean);
   if (!lines.length) { showToast('没有可导入的内容', 'error'); return; }
   if (!supabase) { showToast('未配置 Supabase，无法导入云端', 'error'); return; }
-  const rows = lines.map((text) => ({
-    text,
-    main_category: (function(){
-      const sel = document.getElementById('importCategorySelectContent');
-      const v = sel && sel.value ? sel.value : null;
-      return v;
-    })(),
-    content_type: null,
-    scene_tags: [userTag(getCurrentUser().username)],
-    usage_count: 0
-  }));
+  const importCategorySelectContent = document.getElementById('importCategorySelectContent');
+  const importAccountCategorySelectContent = document.getElementById('importAccountCategorySelectContent');
+  const mainCategory = importCategorySelectContent && importCategorySelectContent.value ? importCategorySelectContent.value : null;
+  const accountCategory = importAccountCategorySelectContent && importAccountCategorySelectContent.value ? importAccountCategorySelectContent.value : null;
+  
+  const rows = lines.map((text) => {
+    const sceneTags = [userTag(getCurrentUser().username)];
+    if (accountCategory) {
+      sceneTags.push(accountCategory);
+    }
+    return {
+      text,
+      main_category: mainCategory,
+      content_type: accountCategory,
+      scene_tags: Array.from(new Set(sceneTags)),
+      usage_count: 0
+    };
+  });
   try {
     const { error } = await supabase.from('contents').insert(rows);
     if (error) throw error;

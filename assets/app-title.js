@@ -886,11 +886,20 @@ function openTitleModal(item) {
     if (titleEl) titleEl.textContent = '修改标题';
     if (textEl) textEl.value = item.text || '';
     if (mainCatEl) mainCatEl.value = item.main_category || '';
-    if (typeEl) typeEl.value = item.content_type || '';
-    if (sceneEl)
-      sceneEl.value = Array.isArray(item.scene_tags)
-        ? item.scene_tags.join(', ')
-        : '';
+    
+    // 从 scene_tags 中提取账号分类（场景管理中的值）
+    const settings = getDisplaySettings();
+    const scenes = settings.scenes || [];
+    const sceneTags = Array.isArray(item.scene_tags) ? item.scene_tags : [];
+    const accountCategory = sceneTags.find(tag => scenes.includes(tag));
+    if (typeEl) typeEl.value = accountCategory || item.content_type || '';
+    
+    // 场景标签（排除账号分类和用户标签）
+    const userTagValue = userTag(getCurrentUser().username);
+    const sceneTagsOnly = sceneTags.filter(tag => 
+      !scenes.includes(tag) && tag !== userTagValue
+    );
+    if (sceneEl) sceneEl.value = sceneTagsOnly.join(', ');
   } else {
     state.editingId = null;
     if (titleEl) titleEl.textContent = '新增标题';
@@ -1018,11 +1027,18 @@ async function saveTitleFromModal() {
         .filter(Boolean)
     : [];
 
+  // 账号分类（fieldContentType）应该添加到 scene_tags 中
+  const allSceneTags = [...(sceneTags || [])];
+  if (type) {
+    allSceneTags.push(type);
+  }
+  allSceneTags.push(userTag(getCurrentUser().username));
+
   const payload = {
     text,
     main_category: cat,
     content_type: type,
-    scene_tags: Array.from(new Set([...(sceneTags || []), userTag(getCurrentUser().username)]))
+    scene_tags: Array.from(new Set(allSceneTags))
   };
 
   console.log(
@@ -1166,17 +1182,24 @@ async function runImport() {
     return;
   }
 
-  const rows = lines.map((text) => ({
-    text,
-    main_category: (function(){
-      const sel = document.getElementById('importCategorySelect');
-      const v = sel && sel.value ? sel.value : null;
-      return v;
-    })(),
-    content_type: null,
-    scene_tags: [userTag(getCurrentUser().username)],
-    usage_count: 0
-  }));
+  const importCategorySelect = document.getElementById('importCategorySelect');
+  const importAccountCategorySelect = document.getElementById('importAccountCategorySelect');
+  const mainCategory = importCategorySelect && importCategorySelect.value ? importCategorySelect.value : null;
+  const accountCategory = importAccountCategorySelect && importAccountCategorySelect.value ? importAccountCategorySelect.value : null;
+  
+  const rows = lines.map((text) => {
+    const sceneTags = [userTag(getCurrentUser().username)];
+    if (accountCategory) {
+      sceneTags.push(accountCategory);
+    }
+    return {
+      text,
+      main_category: mainCategory,
+      content_type: accountCategory,
+      scene_tags: Array.from(new Set(sceneTags)),
+      usage_count: 0
+    };
+  });
 
   try {
     const { error } = await supabase.from('titles').insert(rows);
