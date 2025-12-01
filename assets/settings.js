@@ -35,6 +35,8 @@ function saveDisplaySettings(nextSettings) {
   localStorage.setItem(DISPLAY_SETTINGS_KEY, JSON.stringify(settingsState));
   applyDisplayPreview();
   showSettingsToast('已保存并应用');
+  // 触发自定义事件，通知其他页面更新场景下拉菜单
+  window.dispatchEvent(new CustomEvent('settingsUpdated'));
 }
 
 function applyDisplayPreview() {
